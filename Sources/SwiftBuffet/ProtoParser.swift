@@ -169,13 +169,18 @@ struct ProtoParser {
         advance()
         var isDeprecated = false
         var depth = 1
+        // True only where an option NAME can start ([ or a depth-1 comma),
+        // so the tail of a dotted custom option like (my.ext).deprecated
+        // is never mistaken for the standard option.
+        var atOptionName = true
         while depth > 0 {
-            switch peek().kind {
+            let kind = peek().kind
+            switch kind {
             case .openBracket, .openBrace, .openParen, .openAngle:
                 depth += 1
             case .closeBracket, .closeBrace, .closeParen, .closeAngle:
                 depth -= 1
-            case .identifier("deprecated") where depth == 1:
+            case .identifier("deprecated") where depth == 1 && atOptionName:
                 if peekNext().kind == .equals,
                    case .identifier("true") = peek(ahead: 2).kind {
                     isDeprecated = true
@@ -185,6 +190,7 @@ struct ProtoParser {
             default:
                 break
             }
+            atOptionName = kind == .comma && depth == 1
             advance()
         }
         return isDeprecated
@@ -238,7 +244,9 @@ struct ProtoParser {
     // MARK: - Skipping
 
     /// Skips to the statement-terminating semicolon, stepping over balanced
-    /// `{...}` regions so aggregate option values can't end the skip early.
+    /// `{...}` and `<...>` regions — both are legal aggregate option value
+    /// delimiters and may contain semicolons — so an aggregate value can't
+    /// end the skip early.
     private mutating func skipToSemicolon() throws {
         var depth = 0
         while true {
@@ -246,9 +254,9 @@ struct ProtoParser {
             case .semicolon where depth == 0:
                 advance()
                 return
-            case .openBrace:
+            case .openBrace, .openAngle:
                 depth += 1
-            case .closeBrace:
+            case .closeBrace, .closeAngle:
                 depth -= 1
             case .eof:
                 throw unexpected(expected: "';'")

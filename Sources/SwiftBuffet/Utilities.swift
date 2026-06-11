@@ -65,13 +65,30 @@ func snakeToCamelCase(_ string: String) -> String {
 
 /// Strips the common prefix from a list of enum cases and converts them to camelCase.
 ///
+/// Only whole `_`-delimited words are stripped, and never so much that a
+/// case name becomes empty — a single-case enum shares its entire name as
+/// the "common" prefix, and `GENDER = 0; GENDER_MALE = 1;` shares all of
+/// `GENDER`.
+///
 /// - Parameter cases: An array of `ProtoEnumCase` to be processed.
 /// - Returns: An array of `ProtoEnumCase` with the common prefix removed and names converted to camelCase.
 func stripCommonPrefix(from cases: [ProtoEnumCase]) -> [ProtoEnumCase] {
-    let prefix = findCommonPrefix(in: cases.map { $0.name }) ?? ""
+    let names = cases.map { $0.name }
+    var prefix = findCommonPrefix(in: names) ?? ""
+
+    // Cut back to the last underscore so only whole words are stripped.
+    if let lastUnderscore = prefix.lastIndex(of: "_") {
+        prefix = String(prefix[...lastUnderscore])
+    } else {
+        prefix = ""
+    }
+    // Never strip a name to nothing.
+    if names.contains(where: { $0.count == prefix.count }) {
+        prefix = ""
+    }
+
     return cases.map { enumCase in
-        let removePrefix = enumCase.name.replacingOccurrences(of: prefix, with: "")
-        let newName = snakeToCamelCase(removePrefix)
+        let newName = snakeToCamelCase(String(enumCase.name.dropFirst(prefix.count)))
         return ProtoEnumCase(
             name: newName,
             value: enumCase.value

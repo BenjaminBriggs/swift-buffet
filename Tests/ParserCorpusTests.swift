@@ -179,6 +179,23 @@ final class ParserCorpusTests: XCTestCase {
         XCTAssertEqual(stripped.map(\.name), ["unknown", "male", "female"])
     }
 
+    func testSingleCaseEnumKeepsAUsableName() throws {
+        let stripped = stripCommonPrefix(from: [
+            ProtoEnumCase(name: "S_UNKNOWN", value: 0)
+        ])
+        XCTAssertEqual(stripped.map(\.name), ["unknown"],
+                       "A single case must not be stripped to an empty name")
+    }
+
+    func testPrefixEqualToWholeCaseNameIsNotStripped() throws {
+        let stripped = stripCommonPrefix(from: [
+            ProtoEnumCase(name: "GENDER", value: 0),
+            ProtoEnumCase(name: "GENDER_MALE", value: 1)
+        ])
+        XCTAssertEqual(stripped.map(\.name), ["gender", "genderMale"],
+                       "Stripping must back off entirely when it would empty a name")
+    }
+
     func testHeaderStatementsIgnored() throws {
         let proto = """
         syntax = "proto3";
@@ -268,6 +285,7 @@ final class ParserCorpusTests: XCTestCase {
         let proto = """
         syntax = "proto3";
         option (my.file_option) = { key: "value" nested: { flag: true } };
+        option (my.angle_option) = < a: 1; b: 2 >;
 
         message Api {
         string path = 1;
@@ -276,6 +294,20 @@ final class ParserCorpusTests: XCTestCase {
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
         XCTAssertEqual(messages.count, 1)
         XCTAssertEqual(messages[0].fields.map(\.name), ["path"])
+    }
+
+    func testDottedCustomOptionEndingInDeprecatedIsNotDeprecated() throws {
+        let proto = """
+        message M {
+        int32 a = 1 [(my.ext).deprecated = true];
+        int32 b = 2 [(custom.opt) = 5, deprecated = true];
+        }
+        """
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertFalse(messages[0].fields[0].isDeprecated,
+                       "A dotted custom option ending in .deprecated is not the standard option")
+        XCTAssertTrue(messages[0].fields[1].isDeprecated,
+                      "deprecated = true after a comma is the standard option")
     }
 
     func testOneofMembersBecomeFields() throws {

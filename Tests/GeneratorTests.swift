@@ -414,6 +414,57 @@ final class GeneratorTests: XCTestCase {
         }
     }
 
+    func testMessageAndTopLevelEnumNameCollisionThrows() {
+        let nestedMessage = ProtoMessage(
+            name: "Status",
+            fields: [],
+            parentPath: ["Person"]
+        )
+        let topLevelEnum = ProtoEnum(
+            name: "Status",
+            cases: [ProtoEnumCase(name: "S_UNKNOWN", value: 0)],
+            parentPath: []
+        )
+
+        XCTAssertThrowsError(
+            try generateSwiftCode(
+                from: [nestedMessage],
+                enums: [topLevelEnum],
+                with: "App",
+                includeProto: false,
+                includeLocalIDFor: nil,
+                includeBackingData: false,
+                with: "Proto"
+            )
+        ) { error in
+            XCTAssertTrue(String(describing: error).contains("AppStatus"))
+        }
+    }
+
+    func testNestedEnumDoesNotCollideWithTopLevelType() throws {
+        // A nested enum lives inside an extension of its parent, so it
+        // occupies a different namespace than top-level types.
+        let message = ProtoMessage(name: "Status", fields: [], parentPath: [])
+        let nestedEnum = ProtoEnum(
+            name: "Status",
+            cases: [ProtoEnumCase(name: "S_UNKNOWN", value: 0)],
+            parentPath: ["Person"]
+        )
+        let parent = ProtoMessage(name: "Person", fields: [], parentPath: [])
+
+        XCTAssertNoThrow(
+            try generateSwiftCode(
+                from: [message, parent],
+                enums: [nestedEnum],
+                with: "App",
+                includeProto: false,
+                includeLocalIDFor: nil,
+                includeBackingData: false,
+                with: "Proto"
+            )
+        )
+    }
+
     func testLocalIDs() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",

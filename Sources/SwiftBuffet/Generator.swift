@@ -82,7 +82,12 @@ func generateSwiftCode(
     includeBackingData: Bool,
     with protoPrefix: String
 ) throws -> String {
-    let duplicates = Dictionary(grouping: messages) { $0.name }
+    // Every message becomes a top-level struct, and top-level enums share
+    // that namespace. Nested enums live inside extensions of their parent,
+    // so they cannot collide with top-level types.
+    let topLevelNames = messages.map { (name: $0.name, fullName: $0.fullName) }
+        + enums.filter(\.parentPath.isEmpty).map { (name: $0.name, fullName: $0.fullName) }
+    let duplicates = Dictionary(grouping: topLevelNames) { $0.name }
         .filter { $0.value.count > 1 }
     if let (name, collisions) = duplicates.min(by: { $0.key < $1.key }) {
         throw DuplicateTypeNameError(
