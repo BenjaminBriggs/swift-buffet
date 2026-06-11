@@ -17,8 +17,7 @@ final class ParserTests: XCTestCase {
             &protoFileContent,
             parent: nil,
             with: "MyApp",
-            verbose: false,
-            quite: true
+            verbose: false
         )
 
         XCTAssertEqual(messages.count, 1, "Expected to find 1 message, but got \(messages.count)")
@@ -58,8 +57,7 @@ final class ParserTests: XCTestCase {
             &protoFileContent,
             parent: nil,
             with: "MyApp",
-            verbose: false,
-            quite: true
+            verbose: false
         )
 
         XCTAssertEqual(messages.count, 2, "Expected to find 2 messages, but got \(messages.count)")
@@ -102,8 +100,7 @@ final class ParserTests: XCTestCase {
             &protoFileContent,
             parent: nil,
             with: "MyApp",
-            verbose: false,
-            quite: true
+            verbose: false
         )
 
         XCTAssertEqual(messages.count, 1, "Expected to find 1 message, but got \(messages.count)")
@@ -139,5 +136,94 @@ final class ParserTests: XCTestCase {
         XCTAssertFalse(createdAtField.isOptional, "Expected field to be non-optional")
         XCTAssertFalse(createdAtField.isRepeated, "Expected field to be non-repeated")
         XCTAssertFalse(createdAtField.isMap, "Expected field to be non-map")
+    }
+
+    func testParseFieldModifiers() throws {
+        var protoFileContent = """
+        syntax = "proto3";
+
+        message Person {
+          /** The person's nickname */
+          optional string nick_name = 1;
+          repeated string tags = 2;
+          map<string, string> labels = 3;
+          string old_field = 4 [deprecated = true];
+        }
+        """
+
+        let (messages, _) = parseContent(
+            &protoFileContent,
+            parent: nil,
+            with: "MyApp",
+            verbose: false
+        )
+
+        let fields = messages.first!.fields
+        XCTAssertEqual(fields.count, 4)
+
+        let nickName = fields.first { $0.name == "nick_name" }!
+        XCTAssertTrue(nickName.isOptional)
+        XCTAssertEqual(nickName.comment?.contains("The person's nickname"), true)
+
+        let tags = fields.first { $0.name == "tags" }!
+        XCTAssertTrue(tags.isRepeated)
+        XCTAssertFalse(tags.isOptional)
+
+        let labels = fields.first { $0.name == "labels" }!
+        XCTAssertTrue(labels.isMap)
+        XCTAssertEqual(labels.type, "<string, string>")
+
+        let oldField = fields.first { $0.name == "old_field" }!
+        XCTAssertTrue(oldField.isDeprecated)
+    }
+
+    func testParseAndGenerateExampleProto() throws {
+        var protoFileContent = """
+        syntax = "proto3";
+
+        message Person {
+            string name = 1;
+            int32 id = 2;
+            string email = 3;
+        }
+
+        message AddressBook {
+            repeated Person people = 1;
+            optional bool is_current = 2;
+        }
+
+        message Address {
+            string street = 1 [deprecated = true];
+        }
+        """
+
+        let (messages, enums) = parseContent(
+            &protoFileContent,
+            parent: nil,
+            with: "",
+            verbose: false
+        )
+
+        XCTAssertEqual(messages.count, 3)
+        XCTAssertEqual(enums.count, 0)
+
+        let code = generateSwiftCode(
+            from: messages,
+            enums: enums,
+            with: "",
+            includeProto: true,
+            includeLocalIDFor: nil,
+            includeBackingData: false,
+            with: "Proto"
+        )
+
+        XCTAssertTrue(code.contains("public struct Person: Hashable, Equatable, Sendable {"))
+        XCTAssertTrue(code.contains("public let id: Int"))
+        XCTAssertTrue(code.contains("self.id = Int(proto.id)"))
+        XCTAssertTrue(code.contains("public let people: [Person]"))
+        XCTAssertTrue(code.contains("self.people = proto.people.compactMap { Person(proto: $0) }"))
+        XCTAssertTrue(code.contains("public let isCurrent: Bool"))
+        XCTAssertTrue(code.contains("/// This property has been marked as **deprecated** in the proto file"))
+        XCTAssertTrue(code.contains("public init?(data: Data) {"))
     }
 }

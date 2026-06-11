@@ -25,7 +25,7 @@ func swiftType(from type: String, with swiftPrefix: String) -> String {
 
 
 /// An array of primitive protocol buffer types.
-var primitiveTypes = [
+let primitiveTypes = [
    "double",
    "float",
    "sint32",
@@ -37,6 +37,24 @@ var primitiveTypes = [
    "bool",
    "string",
    "bytes"
+]
+
+/// Proto integer types that map to `Int`.
+let signedIntTypes = [
+    "int32",
+    "sint32",
+    "sfixed32",
+    "int64",
+    "sint64",
+    "sfixed64"
+]
+
+/// Proto integer types that map to `UInt`.
+let unsignedIntTypes = [
+    "uint32",
+    "fixed32",
+    "uint64",
+    "fixed64"
 ]
 
 /// Converts a snake_case string to camelCase.
@@ -57,15 +75,28 @@ func snakeToCamelCase(_ string: String) -> String {
 
 /// Strips the common prefix from a list of enum cases and converts them to camelCase.
 ///
+/// The prefix is only stripped at an underscore boundary, and only when there is
+/// more than one case (a single case is its own common prefix).
+///
 /// - Parameter cases: An array of `ProtoEnumCase` to be processed.
 /// - Returns: An array of `ProtoEnumCase` with the common prefix removed and names converted to camelCase.
 func stripCommonPrefix(from cases: [ProtoEnumCase]) -> [ProtoEnumCase] {
-    let prefix = findCommonPrefix(in: cases.map { $0.name }) ?? ""
+    var prefix = ""
+    if cases.count > 1 {
+        let commonPrefix = findCommonPrefix(in: cases.map { $0.name }) ?? ""
+        // Trim back to the last underscore so we only strip whole words,
+        // e.g. MALE/MARRIED share "MA" but no word prefix.
+        if let lastUnderscore = commonPrefix.lastIndex(of: "_") {
+            prefix = String(commonPrefix[...lastUnderscore])
+        }
+    }
     return cases.map { enumCase in
-        let removePrefix = enumCase.name.replacingOccurrences(of: prefix, with: "")
-        let newName = snakeToCamelCase(removePrefix)
+        var strippedName = String(enumCase.name.dropFirst(prefix.count))
+        if strippedName.isEmpty || strippedName.first?.isNumber == true {
+            strippedName = enumCase.name
+        }
         return ProtoEnumCase(
-            name: newName,
+            name: snakeToCamelCase(strippedName),
             value: enumCase.value
         )
     }
@@ -90,32 +121,8 @@ func findCommonPrefix(in strings: [String]) -> String? {
     return prefix
 }
 
-/// Reads the contents of a file.
-///
-/// - Parameters:
-///   - filename: The name of the file to read.
-///   - file: The path to the file. Defaults to the current file path.
-/// - Returns: The contents of the file as a string, or `nil` if an error occurs.
-func readFileContents(filename: String, file: StaticString = #file) -> String? {
-    let fileURL = URL(fileURLWithPath: "\(file)", isDirectory: false)
-    let directoryURL = fileURL.deletingLastPathComponent()
-    let targetFileURL = directoryURL.appendingPathComponent(filename)
-
-    do {
-        let fileContents = try String(contentsOf: targetFileURL)
-        return fileContents
-    } catch {
-        print("Error reading file: \(error)")
-        return nil
-    }
-}
-
 extension String {
     func capitalizingFirstLetter() -> String {
         return prefix(1).capitalized + dropFirst()
-    }
-
-    mutating func capitalizeFirstLetter() {
-        self = self.capitalizingFirstLetter()
     }
 }
