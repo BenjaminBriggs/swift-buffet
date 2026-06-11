@@ -9,9 +9,10 @@ final class LexerTests: XCTestCase {
 
     func testPunctuation() throws {
         XCTAssertEqual(
-            try kinds("{ } = ; < > , [ ] ."),
+            try kinds("{ } = ; < > , [ ] ( ) ."),
             [.openBrace, .closeBrace, .equals, .semicolon,
-             .openAngle, .closeAngle, .comma, .openBracket, .closeBracket, .dot,
+             .openAngle, .closeAngle, .comma, .openBracket, .closeBracket,
+             .openParen, .closeParen, .dot,
              .eof]
         )
     }

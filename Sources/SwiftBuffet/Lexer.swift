@@ -31,6 +31,8 @@ enum TokenKind: Equatable {
     case comma
     case openBracket
     case closeBracket
+    case openParen
+    case closeParen
     case dot
     case eof
 }
@@ -73,6 +75,8 @@ struct Lexer {
             case ",": appendAndAdvance(.comma)
             case "[": appendAndAdvance(.openBracket)
             case "]": appendAndAdvance(.closeBracket)
+            case "(": appendAndAdvance(.openParen)
+            case ")": appendAndAdvance(.closeParen)
             case ".": appendAndAdvance(.dot)
             case "\"":
                 try lexStringLiteral()
