@@ -30,18 +30,25 @@ struct ProtoParser {
 
     private mutating func parseFile() throws -> ProtoFileNode {
         var file = ProtoFileNode()
-        while case .identifier(let keyword) = peek().kind {
-            switch keyword {
-            case "message":
-                file.messages.append(try parseMessage())
-            case "enum":
-                file.enums.append(try parseEnum())
-            case "syntax", "package", "import", "option":
-                try skipToSemicolon()
-            case "service", "extend":
-                try skipUnsupportedBlock(named: keyword)
+        loop: while true {
+            switch peek().kind {
+            case .docComment:
+                advance()
+            case .identifier(let keyword):
+                switch keyword {
+                case "message":
+                    file.messages.append(try parseMessage())
+                case "enum":
+                    file.enums.append(try parseEnum())
+                case "syntax", "package", "import", "option":
+                    try skipToSemicolon()
+                case "service", "extend":
+                    try skipUnsupportedBlock(named: keyword)
+                default:
+                    throw unexpected(expected: "'message', 'enum', or a header statement")
+                }
             default:
-                throw unexpected(expected: "'message', 'enum', or a header statement")
+                break loop
             }
         }
         try expect(.eof, description: "'message', 'enum', or a header statement")
@@ -55,7 +62,10 @@ struct ProtoParser {
         var node = MessageNode(name: name)
 
         while peek().kind != .closeBrace {
-            let comment = takeDocComment()
+            let comment = takeDocComments()
+            if peek().kind == .closeBrace {
+                break // dangling comment before the closing brace
+            }
 
             guard case .identifier(let word) = peek().kind else {
                 throw unexpected(expected: "a field, 'message', 'enum', or '}'")
@@ -68,14 +78,35 @@ struct ProtoParser {
                 node.enums.append(try parseEnum())
             case "option", "reserved":
                 try skipToSemicolon()
-            case "oneof":
-                try skipUnsupportedBlock(named: word)
+            case "oneof" where isDeclarationLookahead():
+                try parseOneofMembers(into: &node)
             default:
                 node.fields.append(try parseField(comment: comment))
             }
         }
         try expect(.closeBrace, description: "'}'")
         return node
+    }
+
+    /// Parses a `oneof` block, adding its member fields to the enclosing
+    /// message as ordinary fields — matching what the generated structs have
+    /// always contained for oneof members.
+    private mutating func parseOneofMembers(into node: inout MessageNode) throws {
+        advance() // "oneof"
+        advance() // name
+        try expect(.openBrace, description: "'{'")
+        while peek().kind != .closeBrace {
+            let comment = takeDocComments()
+            if peek().kind == .closeBrace {
+                break
+            }
+            if case .identifier("option") = peek().kind {
+                try skipToSemicolon()
+                continue
+            }
+            node.fields.append(try parseField(comment: comment))
+        }
+        try expect(.closeBrace, description: "'}'")
     }
 
     private mutating func parseField(comment: String?) throws -> FieldNode {
@@ -127,31 +158,34 @@ struct ProtoParser {
         )
     }
 
-    /// Parses an optional `[name = value, ...]` list; returns `isDeprecated`.
+    /// Scans an optional `[...]` option list, extracting only `deprecated = true`.
+    ///
+    /// Everything else — parenthesized custom options, aggregate `{...}`
+    /// values, float literals — is skipped without being understood, so an
+    /// option this tool doesn't support can never fail the parse.
     private mutating func parseFieldOptions() throws -> Bool {
         guard peek().kind == .openBracket else { return false }
         advance()
         var isDeprecated = false
-        while peek().kind != .closeBracket {
-            let optionName = try parseTypeName() // option names can be dotted
-            try expect(.equals, description: "'='")
-            let value: String
+        var depth = 1
+        while depth > 0 {
             switch peek().kind {
-            case .identifier(let text): value = text
-            case .intLiteral(let number): value = String(number)
-            case .stringLiteral(let text): value = text
+            case .openBracket, .openBrace, .openParen, .openAngle:
+                depth += 1
+            case .closeBracket, .closeBrace, .closeParen, .closeAngle:
+                depth -= 1
+            case .identifier("deprecated") where depth == 1:
+                if peekNext().kind == .equals,
+                   case .identifier("true") = peek(ahead: 2).kind {
+                    isDeprecated = true
+                }
+            case .eof:
+                throw unexpected(expected: "']'")
             default:
-                throw unexpected(expected: "an option value")
+                break
             }
             advance()
-            if optionName == "deprecated" && value == "true" {
-                isDeprecated = true
-            }
-            if peek().kind == .comma {
-                advance()
-            }
         }
-        try expect(.closeBracket, description: "']'")
         return isDeprecated
     }
 
@@ -162,7 +196,10 @@ struct ProtoParser {
         var node = EnumNode(name: name)
 
         while peek().kind != .closeBrace {
-            _ = takeDocComment()
+            _ = takeDocComments()
+            if peek().kind == .closeBrace {
+                break // dangling comment before the closing brace
+            }
 
             guard case .identifier(let word) = peek().kind else {
                 throw unexpected(expected: "an enum case or '}'")
@@ -199,17 +236,25 @@ struct ProtoParser {
 
     // MARK: - Skipping
 
+    /// Skips to the statement-terminating semicolon, stepping over balanced
+    /// `{...}` regions so aggregate option values can't end the skip early.
     private mutating func skipToSemicolon() throws {
+        var depth = 0
         while true {
             switch peek().kind {
-            case .semicolon:
+            case .semicolon where depth == 0:
                 advance()
                 return
+            case .openBrace:
+                depth += 1
+            case .closeBrace:
+                depth -= 1
             case .eof:
                 throw unexpected(expected: "';'")
             default:
-                advance()
+                break
             }
+            advance()
         }
     }
 
@@ -276,10 +321,15 @@ struct ProtoParser {
         return token
     }
 
-    private mutating func takeDocComment() -> String? {
-        guard case .docComment(let text) = peek().kind else { return nil }
-        advance()
-        return text
+    /// Consumes a run of consecutive doc comments, returning the last one —
+    /// the comment adjacent to the declaration it documents.
+    private mutating func takeDocComments() -> String? {
+        var comment: String?
+        while case .docComment(let text) = peek().kind {
+            comment = text
+            advance()
+        }
+        return comment
     }
 
     private mutating func expect(
@@ -320,6 +370,7 @@ struct ProtoParser {
         case .openParen: found = "'('"
         case .closeParen: found = "')'"
         case .dot: found = "'.'"
+        case .unknown(let character): found = "'\(character)'"
         case .eof: found = "end of file"
         }
         return ParseError(

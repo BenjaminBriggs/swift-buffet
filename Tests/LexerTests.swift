@@ -92,8 +92,17 @@ final class LexerTests: XCTestCase {
         }
     }
 
-    func testUnexpectedCharacterThrows() {
-        XCTAssertThrowsError(try Lexer.tokenize("message §")) { error in
+    func testUnknownCharactersBecomeTokens() throws {
+        XCTAssertEqual(
+            try kinds("get: \"/v1\""),
+            [.identifier("get"), .unknown(":"), .stringLiteral("/v1"), .eof]
+        )
+    }
+
+    func testUnknownCharacterInParsedPositionThrows() {
+        XCTAssertThrowsError(
+            try ProtoParser.parse("message § {}", quite: true)
+        ) { error in
             guard let parseError = error as? ParseError else {
                 return XCTFail("Expected ParseError, got \(error)")
             }

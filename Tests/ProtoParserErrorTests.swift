@@ -62,7 +62,7 @@ final class ProtoParserErrorTests: XCTestCase {
         XCTAssertNotNil(parseError(proto))
     }
 
-    func testOneofIsSkippedWithoutError() throws {
+    func testOneofMembersAreParsedAsFields() throws {
         let proto = """
         message A {
         string x = 1;
@@ -75,7 +75,7 @@ final class ProtoParserErrorTests: XCTestCase {
         """
         let file = try ProtoParser.parse(proto, quite: true)
         XCTAssertEqual(file.messages.count, 1)
-        XCTAssertEqual(file.messages[0].fields.map(\.name), ["x", "y"])
+        XCTAssertEqual(file.messages[0].fields.map(\.name), ["x", "a", "b", "y"])
     }
 
     func testServiceIsSkippedWithoutError() throws {

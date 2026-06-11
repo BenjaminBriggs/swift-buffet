@@ -34,6 +34,10 @@ enum TokenKind: Equatable {
     case openParen
     case closeParen
     case dot
+    /// A character with no meaning in the supported grammar (e.g. ':' inside
+    /// an aggregate option value). Kept as a token so skipped regions can
+    /// contain it; the parser throws if one appears where it parses strictly.
+    case unknown(Character)
     case eof
 }
 
@@ -90,7 +94,7 @@ struct Lexer {
                 } else if character.isLetter || character == "_" {
                     lexIdentifier()
                 } else {
-                    throw error(expected: "a valid token", found: String(character))
+                    appendAndAdvance(.unknown(character))
                 }
             }
         }

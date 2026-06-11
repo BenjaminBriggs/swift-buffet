@@ -221,6 +221,82 @@ final class ParserCorpusTests: XCTestCase {
         XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
     }
 
+    func testDocCommentsInAllPositions() throws {
+        let proto = """
+        /** File-level overview comment. */
+        message Person {
+        /** first */
+        /** second comment wins */
+        string name = 1;
+        int32 age = 2;
+        /** dangling comment before close */
+        }
+        /** between declarations */
+        enum Plan {
+        /** case comment */
+        PLAN_FREE = 0;
+        /** dangling in enum */
+        }
+        """
+        let (messages, enums) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(enums.count, 1)
+        XCTAssertEqual(messages[0].fields.map(\.name), ["name", "age"])
+        XCTAssertTrue(messages[0].fields[0].comment?.contains("second comment wins") == true)
+        XCTAssertNil(messages[0].fields[1].comment)
+        XCTAssertEqual(enums[0].cases.map(\.name), ["PLAN_FREE"])
+    }
+
+    func testCustomParenthesizedFieldOptions() throws {
+        let proto = """
+        message User {
+        string email = 1 [(validate.rules).string.min_len = 1];
+        string name = 2 [(validate.rules).string = { min_len: 1, max_len: 64 }];
+        float ratio = 3 [some_option = 0.5];
+        string street = 4 [deprecated = true, (custom.opt) = "x"];
+        }
+        """
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages[0].fields.map(\.name), ["email", "name", "ratio", "street"])
+        XCTAssertFalse(messages[0].fields[0].isDeprecated)
+        XCTAssertFalse(messages[0].fields[2].isDeprecated)
+        XCTAssertTrue(messages[0].fields[3].isDeprecated)
+    }
+
+    func testAggregateOptionValuesIgnored() throws {
+        let proto = """
+        syntax = "proto3";
+        option (my.file_option) = { key: "value" nested: { flag: true } };
+
+        message Api {
+        string path = 1;
+        }
+        """
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages[0].fields.map(\.name), ["path"])
+    }
+
+    func testOneofMembersBecomeFields() throws {
+        let proto = """
+        message Event {
+        string id = 1;
+        oneof payload {
+        string click = 2;
+        int32 view = 3;
+        }
+        string source = 4;
+        }
+        """
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(
+            messages[0].fields.map(\.name),
+            ["id", "click", "view", "source"]
+        )
+    }
+
     func testKeywordLikeFieldNames() throws {
         let proto = """
         message Config {
