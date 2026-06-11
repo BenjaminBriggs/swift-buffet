@@ -3,20 +3,17 @@ import XCTest
 
 /// Characterization corpus for `parseProto`.
 ///
-/// These tests pin the parsing contract across the regex → recursive-descent
-/// migration. Tests the regex implementation is known to fail are wrapped in
-/// `XCTExpectFailure` and become real regression tests in Phase 1.
+/// These tests pin the parsing contract established before the regex →
+/// recursive-descent migration, including inputs the regex parser mishandled.
 final class ParserCorpusTests: XCTestCase {
 
     func testEmptyMessageSingleLine() throws {
         let proto = "message Empty {}"
-        XCTExpectFailure("regex parser known bug — fixed in Phase 1") {
-            let (messages, enums) = (try? parseProto(proto, swiftPrefix: "")) ?? ([], [])
-            XCTAssertEqual(enums.count, 0)
-            XCTAssertEqual(messages.count, 1)
-            XCTAssertEqual(messages.first?.name, "Empty")
-            XCTAssertEqual(messages.first?.fields.count, 0)
-        }
+        let (messages, enums) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(enums.count, 0)
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages.first?.name, "Empty")
+        XCTAssertEqual(messages.first?.fields.count, 0)
     }
 
     func testSimpleMessageFieldTypes() throws {
@@ -73,19 +70,17 @@ final class ParserCorpusTests: XCTestCase {
         }
         }
         """
-        XCTExpectFailure("regex parser known bug — fixed in Phase 1") {
-            let (messages, _) = (try? parseProto(proto, swiftPrefix: "")) ?? ([], [])
-            XCTAssertEqual(messages.count, 3)
-            let outer = messages.first { $0.name == "Outer" }
-            let middle = messages.first { $0.name == "Middle" }
-            let inner = messages.first { $0.name == "Inner" }
-            XCTAssertNil(outer?.parentName)
-            XCTAssertEqual(middle?.parentName, "Outer")
-            XCTAssertEqual(inner?.parentName, "Middle")
-            XCTAssertEqual(outer?.fields.map(\.name), ["a"])
-            XCTAssertEqual(middle?.fields.map(\.name), ["b"])
-            XCTAssertEqual(inner?.fields.map(\.name), ["c"])
-        }
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 3)
+        let outer = messages.first { $0.name == "Outer" }
+        let middle = messages.first { $0.name == "Middle" }
+        let inner = messages.first { $0.name == "Inner" }
+        XCTAssertNil(outer?.parentName)
+        XCTAssertEqual(middle?.parentName, "Outer")
+        XCTAssertEqual(inner?.parentName, "Middle")
+        XCTAssertEqual(outer?.fields.map(\.name), ["a"])
+        XCTAssertEqual(middle?.fields.map(\.name), ["b"])
+        XCTAssertEqual(inner?.fields.map(\.name), ["c"])
     }
 
     func testNestedEnumInMessage() throws {
@@ -98,14 +93,12 @@ final class ParserCorpusTests: XCTestCase {
         Gender gender = 1;
         }
         """
-        XCTExpectFailure("regex parser known bug (enum closing brace not indented) — fixed in Phase 1") {
-            let (messages, enums) = (try? parseProto(proto, swiftPrefix: "")) ?? ([], [])
-            XCTAssertEqual(messages.count, 1)
-            XCTAssertEqual(enums.count, 1)
-            XCTAssertEqual(enums.first?.parentName, "Person")
-            XCTAssertEqual(enums.first?.cases.map(\.value), [0, 1])
-            XCTAssertEqual(messages.first?.fields.map(\.type), ["Gender"])
-        }
+        let (messages, enums) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(enums.count, 1)
+        XCTAssertEqual(enums.first?.parentName, "Person")
+        XCTAssertEqual(enums.first?.cases.map(\.value), [0, 1])
+        XCTAssertEqual(messages.first?.fields.map(\.type), ["Gender"])
     }
 
     func testOptionalAndRepeatedFields() throws {
@@ -212,11 +205,9 @@ final class ParserCorpusTests: XCTestCase {
 
     func testClosingBraceOnSameLineAsField() throws {
         let proto = "message A { string x = 1; }"
-        XCTExpectFailure("regex parser known bug — fixed in Phase 1") {
-            let (messages, _) = (try? parseProto(proto, swiftPrefix: "")) ?? ([], [])
-            XCTAssertEqual(messages.count, 1)
-            XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
-        }
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
     }
 
     func testClosingBraceIndented() throws {
@@ -225,11 +216,9 @@ final class ParserCorpusTests: XCTestCase {
             string x = 1;
             }
         """
-        XCTExpectFailure("regex parser known bug — fixed in Phase 1") {
-            let (messages, _) = (try? parseProto(proto, swiftPrefix: "")) ?? ([], [])
-            XCTAssertEqual(messages.count, 1)
-            XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
-        }
+        let (messages, _) = try parseProto(proto, swiftPrefix: "")
+        XCTAssertEqual(messages.count, 1)
+        XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
     }
 
     func testKeywordLikeFieldNames() throws {
