@@ -222,7 +222,7 @@ private func protoInitStatement(for field: ProtoField) -> String {
 
     var statement: String
     if field.isRepeated {
-        let transform = (field.isPrimitiveType || field.type.contains("int"))
+        let transform = (field.isPrimitiveType || field.isIntegerScalar)
             ? "\(baseType)($0)"
             : "\(baseType)(proto: $0)"
         statement = "self.\(name) = proto.\(protoName).compactMap { \(transform) }"
@@ -236,26 +236,27 @@ private func protoInitStatement(for field: ProtoField) -> String {
         if field.isOptional {
             statement = "self.\(name) = URL(string: proto.\(protoName))"
         } else {
-            statement = """
-            if let \(name) = URL(string: proto.\(protoName)) {
-                self.\(name) = \(name)
-            } else {
-                return nil
-            }
-            """
+            statement = requiredAssignment(
+                of: name,
+                to: "URL(string: proto.\(protoName))"
+            )
         }
-    } else if field.type.contains("int") {
-        statement = "self.\(name) = Int(exactly: proto.\(protoName))!"
+    } else if field.isIntegerScalar {
+        if field.isOptional {
+            statement = "self.\(name) = \(baseType)(exactly: proto.\(protoName))"
+        } else {
+            statement = requiredAssignment(
+                of: name,
+                to: "\(baseType)(exactly: proto.\(protoName))"
+            )
+        }
     } else if field.isPrimitiveType {
         statement = "self.\(name) = proto.\(protoName)"
     } else if field.isOptional == false {
-        statement = """
-        if let \(name) = \(baseType)(proto: proto.\(protoName)) {
-            self.\(name) = \(name)
-        } else {
-            return nil
-        }
-        """
+        statement = requiredAssignment(
+            of: name,
+            to: "\(baseType)(proto: proto.\(protoName))"
+        )
     } else {
         statement = "self.\(name) = \(baseType)(proto: proto.\(protoName))"
     }
@@ -278,6 +279,18 @@ private func protoInitStatement(for field: ProtoField) -> String {
     }
 
     return statement
+}
+
+/// An `if let` binding that assigns the unwrapped value or fails the
+/// initializer — the shape shared by every conversion that can fail.
+private func requiredAssignment(of name: String, to expression: String) -> String {
+    """
+    if let \(name) = \(expression) {
+        self.\(name) = \(name)
+    } else {
+        return nil
+    }
+    """
 }
 
 // MARK: - Enums

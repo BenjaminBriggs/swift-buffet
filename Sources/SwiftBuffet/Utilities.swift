@@ -24,6 +24,14 @@ func swiftType(from type: String, with swiftPrefix: String) -> String {
 }
 
 
+/// Proto scalar types that map to Swift integer types (see `swiftType`).
+let integerScalarTypes: Set<String> = [
+    "int32", "sint32", "sfixed32",
+    "int64", "sint64", "sfixed64",
+    "uint32", "fixed32",
+    "uint64", "fixed64"
+]
+
 /// An array of primitive protocol buffer types.
 var primitiveTypes = [
    "double",

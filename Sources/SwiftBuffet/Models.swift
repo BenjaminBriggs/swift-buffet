@@ -111,6 +111,12 @@ struct ProtoField {
         }
     }
 
+    /// Indicates if the field is an integer scalar (int32, uint64, etc.),
+    /// which converts between SwiftProtobuf's fixed-width type and Int/UInt.
+    var isIntegerScalar: Bool {
+        integerScalarTypes.contains(type)
+    }
+
     /// Indicates if the field is of a primitive type.
     var isPrimitiveType: Bool {
         if isMap {

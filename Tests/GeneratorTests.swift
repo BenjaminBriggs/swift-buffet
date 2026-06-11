@@ -271,6 +271,83 @@ final class GeneratorTests: XCTestCase {
         XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
     }
 
+    func testIntegerConversionIsFailableNotForceUnwrapped() throws {
+        let message = ProtoMessage(
+            name: "Stats",
+            fields: [
+                ProtoField(
+                    swiftPrefix: "App",
+                    name: "view_count",
+                    type: "uint64",
+                    comment: nil,
+                    isOptional: false,
+                    isRepeated: false,
+                    isMap: false,
+                    isDeprecated: false
+                ),
+                ProtoField(
+                    swiftPrefix: "App",
+                    name: "rank",
+                    type: "int32",
+                    comment: nil,
+                    isOptional: false,
+                    isRepeated: false,
+                    isMap: false,
+                    isDeprecated: false
+                )
+            ],
+            parentName: nil
+        )
+
+        let generated = try generateSwiftCode(
+            from: [message],
+            enums: [],
+            with: "App",
+            includeProto: true,
+            includeLocalIDFor: nil,
+            includeBackingData: false,
+            with: "Proto"
+        )
+
+        XCTAssertFalse(generated.contains("!"), "Integer conversion must not force-unwrap")
+        XCTAssertTrue(generated.contains("if let viewCount = UInt(exactly: proto.viewCount)"),
+                      "uint64 must convert via its own Swift type, not Int")
+        XCTAssertTrue(generated.contains("if let rank = Int(exactly: proto.rank)"))
+    }
+
+    func testMessageTypeNameContainingIntIsNotTreatedAsInteger() throws {
+        let message = ProtoMessage(
+            name: "Job",
+            fields: [
+                ProtoField(
+                    swiftPrefix: "App",
+                    name: "print_job",
+                    type: "PrintJob",
+                    comment: nil,
+                    isOptional: false,
+                    isRepeated: false,
+                    isMap: false,
+                    isDeprecated: false
+                )
+            ],
+            parentName: nil
+        )
+
+        let generated = try generateSwiftCode(
+            from: [message],
+            enums: [],
+            with: "App",
+            includeProto: true,
+            includeLocalIDFor: nil,
+            includeBackingData: false,
+            with: "Proto"
+        )
+
+        XCTAssertFalse(generated.contains("Int(exactly:"),
+                       "A message type whose name contains 'int' must not take the integer branch")
+        XCTAssertTrue(generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)"))
+    }
+
     func testLocalIDs() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
