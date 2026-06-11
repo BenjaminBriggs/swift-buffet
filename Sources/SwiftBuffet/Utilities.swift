@@ -90,26 +90,6 @@ func findCommonPrefix(in strings: [String]) -> String? {
     return prefix
 }
 
-/// Reads the contents of a file.
-///
-/// - Parameters:
-///   - filename: The name of the file to read.
-///   - file: The path to the file. Defaults to the current file path.
-/// - Returns: The contents of the file as a string, or `nil` if an error occurs.
-func readFileContents(filename: String, file: StaticString = #file) -> String? {
-    let fileURL = URL(fileURLWithPath: "\(file)", isDirectory: false)
-    let directoryURL = fileURL.deletingLastPathComponent()
-    let targetFileURL = directoryURL.appendingPathComponent(filename)
-
-    do {
-        let fileContents = try String(contentsOf: targetFileURL)
-        return fileContents
-    } catch {
-        print("Error reading file: \(error)")
-        return nil
-    }
-}
-
 extension String {
     func capitalizingFirstLetter() -> String {
         return prefix(1).capitalized + dropFirst()

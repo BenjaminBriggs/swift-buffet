@@ -3,8 +3,7 @@ import XCTest
 
 /// Full-pipeline golden snapshots: proto source → parseProto → generateSwiftCode.
 ///
-/// Baselines were captured from the string-concatenation generator in Phase 0
-/// and are re-baselined once in Phase 2 when SwiftSyntax takes over formatting.
+/// Baselines reflect the SwiftSyntax generator's formatted output.
 final class GoldenTests: XCTestCase {
 
     private func generate(
@@ -13,7 +12,7 @@ final class GoldenTests: XCTestCase {
         backingData: Bool = false
     ) throws -> String {
         let (messages, enums) = try parseProto(proto, swiftPrefix: "App")
-        return generateSwiftCode(
+        return try generateSwiftCode(
             from: messages,
             enums: enums,
             with: "App",
@@ -55,16 +54,12 @@ final class GoldenTests: XCTestCase {
 
         // MARK: - Structs
         public struct AppAddress: Hashable, Equatable, Sendable {
-        /// This property has been marked as **deprecated** in the proto file
+            /// This property has been marked as **deprecated** in the proto file
             public let street: String
             public private(set) var _backingData: Data?
-
-            public init(
-                 street: String
-            ) {
+            public init(street: String) {
                 self.street = street
             }
-
             public init?(data: Data) {
                 if let proto = try? ProtoAddress(serializedBytes: data) {
                     self.init(proto: proto)
@@ -73,7 +68,6 @@ final class GoldenTests: XCTestCase {
                     return nil
                 }
             }
-
             internal init?(proto: ProtoAddress) {
                 self.street = proto.street
             }
@@ -83,15 +77,10 @@ final class GoldenTests: XCTestCase {
             public let people: [AppPerson]
             public let isCurrent: Bool
             public private(set) var _backingData: Data?
-
-            public init(
-                 people: [AppPerson],
-                 isCurrent: Bool
-            ) {
+            public init(people: [AppPerson], isCurrent: Bool) {
                 self.people = people
                 self.isCurrent = isCurrent
             }
-
             public init?(data: Data) {
                 if let proto = try? ProtoAddressBook(serializedBytes: data) {
                     self.init(proto: proto)
@@ -100,9 +89,10 @@ final class GoldenTests: XCTestCase {
                     return nil
                 }
             }
-
             internal init?(proto: ProtoAddressBook) {
-                self.people = proto.people.compactMap { AppPerson(proto: $0) }
+                self.people = proto.people.compactMap {
+                    AppPerson(proto: $0)
+                }
                 if proto.hasIsCurrent {
                     self.isCurrent = proto.isCurrent
                 } else {
@@ -117,17 +107,11 @@ final class GoldenTests: XCTestCase {
             public let email: String
             public let _localID = UUID()
             public private(set) var _backingData: Data?
-
-            public init(
-                 name: String,
-                 id: Int,
-                 email: String
-            ) {
+            public init(name: String, id: Int, email: String) {
                 self.name = name
                 self.id = id
                 self.email = email
             }
-
             public init?(data: Data) {
                 if let proto = try? ProtoPerson(serializedBytes: data) {
                     self.init(proto: proto)
@@ -136,14 +120,12 @@ final class GoldenTests: XCTestCase {
                     return nil
                 }
             }
-
             internal init?(proto: ProtoPerson) {
                 self.name = proto.name
                 self.id = Int(exactly: proto.id)!
                 self.email = proto.email
             }
         }
-
 
         """#
 
@@ -188,7 +170,6 @@ final class GoldenTests: XCTestCase {
 
         // MARK: - Structs
         public struct AppProfile: Hashable, Equatable, Sendable {
-
             // Display name shown in the UI.
             public let displayName: String
             public let nickname: String?
@@ -198,17 +179,7 @@ final class GoldenTests: XCTestCase {
             public let sessionLength: TimeInterval
             public let createdAt: Date
             public let status: AppStatus
-
-            public init(
-                 displayName: String,
-                 nickname: String?,
-                 tags: [String],
-                 scores: [String: Int],
-                 avatarURL: URL,
-                 sessionLength: TimeInterval,
-                 createdAt: Date,
-                 status: AppStatus
-            ) {
+            public init(displayName: String, nickname: String?, tags: [String], scores: [String: Int], avatarURL: URL, sessionLength: TimeInterval, createdAt: Date, status: AppStatus) {
                 self.displayName = displayName
                 self.nickname = nickname
                 self.tags = tags
@@ -218,7 +189,6 @@ final class GoldenTests: XCTestCase {
                 self.createdAt = createdAt
                 self.status = status
             }
-
             public init?(data: Data) {
                 if let proto = try? ProtoProfile(serializedBytes: data) {
                     self.init(proto: proto)
@@ -226,7 +196,6 @@ final class GoldenTests: XCTestCase {
                     return nil
                 }
             }
-
             internal init?(proto: ProtoProfile) {
                 self.displayName = proto.displayName
                 if proto.hasNickname {
@@ -234,8 +203,12 @@ final class GoldenTests: XCTestCase {
                 } else {
                     self.nickname = nil
                 }
-                self.tags = proto.tags.compactMap { String($0) }
-                self.scores = proto.scores.reduce(into: [String: Int]()) { $0[$1.key] = $1.value }
+                self.tags = proto.tags.compactMap {
+                    String($0)
+                }
+                self.scores = proto.scores.reduce(into: [String: Int]()) { result, element in
+                    result[element.key] = element.value
+                }
                 if let avatarURL = URL(string: proto.avatarURL) {
                     self.avatarURL = avatarURL
                 } else {
@@ -256,7 +229,6 @@ final class GoldenTests: XCTestCase {
             case unspecified = 0
             case free = 1
             case paid = 2
-
             internal init?(proto: ProtoPlan) {
                 self.init(rawValue: proto.rawValue)
             }
@@ -267,13 +239,11 @@ final class GoldenTests: XCTestCase {
                 case unspecified = 0
                 case active = 1
                 case banned = 2
-
                 internal init?(proto: ProtoProfile.Status) {
                     self.init(rawValue: proto.rawValue)
                 }
             }
         }
-
 
         """#
 

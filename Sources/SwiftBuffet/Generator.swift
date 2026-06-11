@@ -1,4 +1,17 @@
 import Foundation
+import SwiftSyntax
+import SwiftSyntaxBuilder
+import SwiftParser
+
+/// Thrown when the generated source fails to re-parse as valid Swift.
+/// This is the final validation gate: codegen fails here rather than in the
+/// consumer's build.
+struct GenerationError: Error, CustomStringConvertible {
+    let generated: String
+    var description: String {
+        "Internal error: generated Swift failed to parse. Please report this.\n\(generated)"
+    }
+}
 
 /// Generates Swift code from protocol buffer messages and enums.
 ///
@@ -6,6 +19,7 @@ import Foundation
 ///   - messages: An array of `ProtoMessage` representing protocol buffer messages.
 ///   - enums: An array of `ProtoEnum` representing protocol buffer enums.
 /// - Returns: A string containing the generated Swift code.
+/// - Throws: `GenerationError` if the generated source is not valid Swift.
 func generateSwiftCode(
     from messages: [ProtoMessage],
     enums: [ProtoEnum],
@@ -14,440 +28,304 @@ func generateSwiftCode(
     includeLocalIDFor localIDMessages: [String]?,
     includeBackingData: Bool,
     with protoPrefix: String
-) -> String {
-    var output = "import Foundation\n\n"
+) throws -> String {
+    var declarations: [DeclSyntax] = [DeclSyntax("import Foundation")]
 
-    write(
-        messages,
-        to: &output,
-        with: swiftPrefix,
-        includeProto: includeProto,
-        includeLocalIDFor: localIDMessages,
-        includeBackingData: includeBackingData,
-        with: protoPrefix
-    )
-
-    write(
-        enums,
-        to: &output,
-        with: swiftPrefix,
-        includeProto: includeProto,
-        with: protoPrefix
-    )
-
-    return output
-}
-
-/// Writes the Swift code for protocol buffer enums.
-///
-/// - Parameters:
-///   - enums: An array of `ProtoEnum` to be written.
-///   - output: A mutable string where the generated code will be appended.
-internal func write(
-    _ enums: [ProtoEnum],
-    to output: inout String,
-    with swiftPrefix: String,
-    includeProto: Bool,
-    with protoPrefix: String
-) {
-    if enums.isEmpty == false {
-        output += "// MARK: - Enums\n"
-    }
-    for protoEnum in enums.sorted(by: { $0.name < $1.name }) {
-        let strippedCases = stripCommonPrefix(from: protoEnum.cases)
-        let pair = zip(
-            strippedCases.map(\.name),
-            protoEnum.cases.map(\.value)
-        )
-        if let parent = protoEnum.parentName {
-            output += "extension \(swiftPrefix)\(parent) {\n"
-            output += "    "
-        }
-
-        output += "public enum \(swiftPrefix)\(protoEnum.name): Int, CaseIterable, Hashable, Equatable, Sendable {\n"
-
-        for (caseName, caseValue) in pair {
-            if protoEnum.parentName != nil {
-                output += "    "
-            }
-            output += "    case \(caseName) = \(caseValue)\n"
-        }
-        if includeProto {
-            writeEnumProtoInit(
-                for: protoEnum,
-                to: &output,
-                with: protoPrefix
-            )
-        }
-
-        if protoEnum.parentName != nil {
-            output += "    }\n"
-        }
-        output += "}\n\n"
-    }
-}
-
-/// Writes the initializer for a protocol buffer enum.
-///
-/// - Parameters:
-///   - protoEnum: The `ProtoEnum` to write the initializer for.
-///   - output: A mutable string where the generated code will be appended.
-internal func writeEnumProtoInit(for protoEnum: ProtoEnum, to output: inout String, with protoPrefix: String) {
-    output += "\n"
-    let padding = if protoEnum.parentName != nil {
-        "    "
-    } else {
-        ""
-    }
-    output += padding + "    internal init?(proto: \(protoPrefix)\(protoEnum.fullName)) {\n"
-    output += padding + "        self.init(rawValue: proto.rawValue)\n"
-    output += padding + "    }\n"
-}
-
-/// Writes the Swift code for protocol buffer messages.
-///
-/// - Parameters:
-///   - messages: An array of `ProtoMessage` to be written.
-///   - output: A mutable string where the generated code will be appended.
-/// - Returns: A boolean indicating whether a TimeInterval helper is needed.
-internal func write(
-    _ messages: [ProtoMessage],
-    to output: inout String,
-    with swiftPrefix: String,
-    includeProto: Bool,
-    includeLocalIDFor messageNames: [String]?,
-    includeBackingData: Bool,
-    with protoPrefix: String
-) {
-    if messages.isEmpty == false {
-        output += "// MARK: - Structs\n"
-    }
-
-    for message in messages.sorted(by: { $0.name < $1.name }) {
-        output += "public struct \(swiftPrefix)\(message.name): Hashable, Equatable, Sendable {\n"
-
-        writeProperties(
-            for: message,
-            includeLocalID: messageNames?.contains(message.name) ?? false,
-            includeBackingData: includeBackingData,
-            to: &output
-        )
-
-        writeBasicInit(
-            for: message,
-            to: &output
-        )
-
-        if includeProto {
-            writeMessageProtoInit(
+    let sortedMessages = messages.sorted { $0.name < $1.name }
+    for (index, message) in sortedMessages.enumerated() {
+        var declaration = DeclSyntax(
+            try structDecl(
                 for: message,
+                swiftPrefix: swiftPrefix,
+                includeProto: includeProto,
+                includeLocalID: localIDMessages?.contains(message.name) ?? false,
                 includeBackingData: includeBackingData,
-                to: &output,
-                with: protoPrefix
+                protoPrefix: protoPrefix
             )
-        }
+        )
+        declaration.leadingTrivia = sectionTrivia(
+            mark: index == 0 ? "Structs" : nil
+        )
+        declarations.append(declaration)
+    }
 
-        output += "}\n\n"
+    let sortedEnums = enums.sorted { $0.name < $1.name }
+    for (index, protoEnum) in sortedEnums.enumerated() {
+        var declaration = try enumDecl(
+            for: protoEnum,
+            swiftPrefix: swiftPrefix,
+            includeProto: includeProto,
+            protoPrefix: protoPrefix
+        )
+        declaration.leadingTrivia = sectionTrivia(
+            mark: index == 0 ? "Enums" : nil
+        )
+        declarations.append(declaration)
+    }
+
+    let source = SourceFileSyntax {
+        for declaration in declarations {
+            declaration
+        }
+    }
+
+    var text = source.formatted().description
+    if text.hasSuffix("\n") == false {
+        text += "\n"
+    }
+
+    let reparsed = SwiftParser.Parser.parse(source: text)
+    guard reparsed.hasError == false else {
+        throw GenerationError(generated: text)
+    }
+
+    return text
+}
+
+private func sectionTrivia(mark: String?) -> Trivia {
+    if let mark {
+        return [.newlines(2), .lineComment("// MARK: - \(mark)"), .newlines(1)]
+    } else {
+        return [.newlines(2)]
     }
 }
 
-/// Adds properties to a message struct.
-///
-/// - Parameters:
-///   - message: The `ProtoMessage` to add properties for.
-///   - output: A mutable string where the generated code will be appended.
-/// - Returns: A boolean indicating whether the message has a TimeInterval property.
-internal func writeProperties(
+// MARK: - Structs
+
+private func structDecl(
     for message: ProtoMessage,
+    swiftPrefix: String,
+    includeProto: Bool,
     includeLocalID: Bool,
     includeBackingData: Bool,
-    to output: inout String
-) {
+    protoPrefix: String
+) throws -> StructDeclSyntax {
+    var members: [DeclSyntax] = []
+
     for field in message.fields {
-        if let comment = field.comment {
-            output += "\n"
-            output += comment
-                .replacingOccurrences(of: "/**", with: "")
-                .replacingOccurrences(of: "*/", with: "")
-                .replacingOccurrences(of: "*", with: "")
-                .split(separator: "\n")
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
-                .map { String("    // \($0)") }
-                .joined(separator: "\n")
-            output += "\n"
-        }
-        if field.isDeprecated {
-            output += #"/// This property has been marked as **deprecated** in the proto file"#
-            output += "\n"
-        }
-        output += "    public let \(field.caseCorrectName): \(field.caseCorrectedType)\n"
+        members.append(propertyDecl(for: field))
     }
     if includeLocalID {
-        output += "    public let _localID = UUID()\n"
+        members.append(DeclSyntax("public let _localID = UUID()"))
     }
     if includeBackingData {
-        output += "    public private(set) var _backingData: Data?\n"
+        members.append(DeclSyntax("public private(set) var _backingData: Data?"))
+    }
+
+    members.append(DeclSyntax(try memberwiseInit(for: message)))
+
+    if includeProto {
+        members.append(
+            DeclSyntax(
+                try dataInit(
+                    for: message,
+                    includeBackingData: includeBackingData,
+                    protoPrefix: protoPrefix
+                )
+            )
+        )
+        members.append(
+            DeclSyntax(try protoInit(for: message, protoPrefix: protoPrefix))
+        )
+    }
+
+    return try StructDeclSyntax(
+        "public struct \(raw: swiftPrefix)\(raw: message.name): Hashable, Equatable, Sendable"
+    ) {
+        for member in members {
+            member
+        }
     }
 }
 
-/// Adds a basic initializer to a message struct.
-///
-/// - Parameters:
-///   - message: The `ProtoMessage` to add the initializer for.
-///   - output: A mutable string where the generated code will be appended.
-internal func writeBasicInit(for message: ProtoMessage, to output: inout String) {
+/// A stored property for a message field, with its proto comment and any
+/// deprecation notice attached as leading trivia.
+private func propertyDecl(for field: ProtoField) -> DeclSyntax {
+    var lines: [String] = []
 
-    var fields = message.fields
-
-    let last = fields.popLast()
-    
-    output += "\n    public init(\n"
-
-    if last == nil {
-        output += ") {\n"
-    } else {
-        for field in fields {
-            output += "         \(field.caseCorrectName): \(field.caseCorrectedType)"
-            output += ",\n"
-        }
-
-        if let field = last {
-            output += "         \(field.caseCorrectName): \(field.caseCorrectedType)"
-            output += "\n"
-        }
-
-        output += "    ) {\n"
+    if let comment = field.comment {
+        let commentLines = comment
+            .replacingOccurrences(of: "/**", with: "")
+            .replacingOccurrences(of: "*/", with: "")
+            .replacingOccurrences(of: "*", with: "")
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { $0.isEmpty == false }
+        lines.append(contentsOf: commentLines.map { "// \($0)" })
     }
-
-    for field in message.fields {
-        output += "        self.\(field.caseCorrectName) = \(field.caseCorrectName)\n"
+    if field.isDeprecated {
+        lines.append("/// This property has been marked as **deprecated** in the proto file")
     }
+    lines.append("public let \(field.caseCorrectName): \(field.caseCorrectedType)")
 
-    output += "    }\n"
+    return DeclSyntax("\(raw: lines.joined(separator: "\n"))")
 }
 
-/// Writes the initializer for a protocol buffer message.
-///
-/// - Parameters:
-///   - message: The `ProtoMessage` to write the initializer for.
-///   - output: A mutable string where the generated code will be appended.
-internal func writeMessageProtoInit(
+private func memberwiseInit(for message: ProtoMessage) throws -> InitializerDeclSyntax {
+    let parameters = message.fields
+        .map { "\($0.caseCorrectName): \($0.caseCorrectedType)" }
+        .joined(separator: ", ")
+
+    return try InitializerDeclSyntax("public init(\(raw: parameters))") {
+        for field in message.fields {
+            ExprSyntax("self.\(raw: field.caseCorrectName) = \(raw: field.caseCorrectName)")
+        }
+    }
+}
+
+private func dataInit(
     for message: ProtoMessage,
     includeBackingData: Bool,
-    to output: inout String,
-    with protoPrefix: String
-) {
-    output += "\n    public init?(data: Data) {\n"
-    output += "        if let proto = try? \(protoPrefix)\(message.name)(serializedBytes: data) {\n"
-    output += "            self.init(proto: proto)\n"
-    if includeBackingData {
-        output += "            self._backingData = data\n"
-    }
-    output += "        } else {\n"
-    output += "            return nil\n"
-    output += "        }\n"
-    output += "    }\n\n"
+    protoPrefix: String
+) throws -> InitializerDeclSyntax {
+    let backingDataAssignment = includeBackingData
+        ? "\n    self._backingData = data"
+        : ""
 
-    output += "    internal init?(proto: \(protoPrefix)\(message.name)) {\n"
-    for field in message.fields {
-        if field.isOptional {
-            output += "        if proto.has\(field.caseCorrectProtoName.capitalizingFirstLetter()) {\n"
-            output += "    " // additional padding
-        }
-
-        if field.isRepeated {
-            output += "        self.\(field.caseCorrectName) = proto.\(field.caseCorrectProtoName).compactMap { "
-            if field.isPrimitiveType || field.type.contains("int") {
-                output += "\(field.caseCorrectedBaseType)($0)"
+    return try InitializerDeclSyntax("public init?(data: Data)") {
+        ExprSyntax(
+            """
+            if let proto = try? \(raw: protoPrefix)\(raw: message.name)(serializedBytes: data) {
+                self.init(proto: proto)\(raw: backingDataAssignment)
             } else {
-                output += "\(field.caseCorrectedBaseType)(proto: $0)"
+                return nil
             }
-            output += " }\n"
-        } else if field.isMap {
-            output += "        self.\(field.caseCorrectName) = proto.\(field.caseCorrectProtoName).reduce(into: \(field.caseCorrectedType)()) { $0[$1.key] = $1.value }\n"
-        } else if field.caseCorrectedBaseType == "TimeInterval" {
-            output += "        self.\(field.caseCorrectName) = proto.\(field.caseCorrectProtoName).timeInterval\n"
-        } else if field.caseCorrectedBaseType == "Date" {
-            output += "        self.\(field.caseCorrectName) = proto.\(field.caseCorrectProtoName).date\n"
-        } else if field.isURL {
-            if field.isOptional {
-                output += "        self.\(field.caseCorrectName) = URL(string: proto.\(field.caseCorrectName))\n"
-            } else {
-                output += "        if let \(field.caseCorrectName) = URL(string: proto.\(field.caseCorrectName)) {\n"
-                output += "            self.\(field.caseCorrectName) = \(field.caseCorrectName)\n"
-                output += "        } else {\n"
-                output += "            return nil\n"
-                output += "        }\n"
-            }
-        }else if field.type.contains("int") {
-            output += "        self.\(field.caseCorrectName) = Int(exactly: proto.\(field.caseCorrectName))!\n"
-        } else if field.isPrimitiveType {
-            output += "        self.\(field.caseCorrectName) = proto.\(field.caseCorrectProtoName)\n"
-        } else if field.isOptional == false {
-            output += "        if let \(field.caseCorrectName) = \(field.caseCorrectedBaseType)(proto: proto.\(field.caseCorrectProtoName)) {\n"
-            output += "            self.\(field.caseCorrectName) = \(field.caseCorrectProtoName)\n"
-            output += "        } else {\n"
-            output += "            return nil\n"
-            output += "        }\n"
-        } else {
-            output += "        self.\(field.caseCorrectName) = \(field.caseCorrectedBaseType)(proto: proto.\(field.caseCorrectProtoName))\n"
-        }
-
-        if field.isOptional {
-            output += "        } else {\n"
-            output += "            self.\(field.caseCorrectName)"
-            writeDefaultValue(for: field, to: &output)
-            output += "\n"
-            output += "        }\n"
-        }
+            """
+        )
     }
-    output += "    }\n"
 }
 
-internal func writeCodingKeys(for message: ProtoMessage, to output: inout String) {
-    output += "\n    enum CodingKeys: String, CodingKey {\n"
-    for field in message.fields {
-        output += "        case \(field.caseCorrectName) = \"\(snakeToCamelCase(field.name))\"\n"
+private func protoInit(
+    for message: ProtoMessage,
+    protoPrefix: String
+) throws -> InitializerDeclSyntax {
+    try InitializerDeclSyntax("internal init?(proto: \(raw: protoPrefix)\(raw: message.name))") {
+        for field in message.fields {
+            ExprSyntax("\(raw: protoInitStatement(for: field))")
+        }
     }
-    output += "    }\n"
 }
 
-/// Writes the custom initializer and encoder for messages with TimeInterval fields.
+/// The statement assigning one field inside `init?(proto:)`.
 ///
-/// - Parameters:
-///   - message: The `ProtoMessage` to write the custom initializer and encoder for.
-///   - output: A mutable string where the generated code will be appended.
-internal func writeCodableInit(for message: ProtoMessage, to output: inout String) {
-    output += "\n"
-    output += "    public init(from decoder: Decoder) throws {\n"
-    output += "        let container = try decoder.container(keyedBy: CodingKeys.self)\n"
+/// Mirrors the legacy generator's branch ladder, with one deliberate
+/// correction: the legacy code referenced `caseCorrectName` on the proto
+/// object (and assigned it after `if let`) in the URL, integer, and
+/// non-optional message branches, which produced wrong code whenever the
+/// Swift and proto property names differ (e.g. `description`). All proto
+/// accesses now use `caseCorrectProtoName` and `if let` bindings are
+/// assigned correctly.
+private func protoInitStatement(for field: ProtoField) -> String {
+    let name = field.caseCorrectName
+    let protoName = field.caseCorrectProtoName
+    let baseType = field.caseCorrectedBaseType
 
-    for field in message.fields {
-        if field.isRepeated {
-            output += "        self.\(field.caseCorrectName) = try container.decodeIfPresent(\(field.caseCorrectedType).self, forKey: .\(field.caseCorrectName)) ?? []\n"
-        } else if field.isMap {
-            output += "        self.\(field.caseCorrectName) = try container.decodeIfPresent(\(field.caseCorrectedType).self, forKey: .\(field.caseCorrectName)) ?? [:]\n"
-        } else if field.caseCorrectedType == "TimeInterval" {
-            output += "        if let \(field.caseCorrectName)String = try container.decodeIfPresent(String.self, forKey: .\(field.caseCorrectName)) {\n"
-            output += "            self.\(field.caseCorrectName) = TimeInterval(from: \(field.caseCorrectName)String) ?? 0\n"
-            output += "        } else {\n"
-            if field.isOptional {
-                output += "            self.\(field.caseCorrectName) = nil\n"
-            } else {
-                output += "            self.\(field.caseCorrectName) = 0\n"
-            }
-            output += "        }\n"
-        } else if field.caseCorrectedType.contains("Date") {
-            output += "        if let \(field.caseCorrectName)String = try container.decodeIfPresent(String.self, forKey: .\(field.caseCorrectName)) {\n"
-            output += "            self.\(field.caseCorrectName) = dateFormatter.date(from: \(field.caseCorrectName)String)\n"
-            output += "        } else {\n"
-            if field.isOptional {
-                output += "            self.\(field.caseCorrectName) = nil\n"
-            } else {
-                output += "            self.\(field.caseCorrectName) = Date()\n"
-            }
-            output += "        }\n"
-        } else if field.isOptional {
-            output += "        self.\(field.caseCorrectName) = try container.decodeIfPresent(\(field.caseCorrectedType.replacingOccurrences(of: "?", with: "")).self, forKey: .\(field.caseCorrectName))\n"
-        } else if field.type == "bool" {
-            output += "        self.\(field.caseCorrectName) = try container.decodeIfPresent(\(field.caseCorrectedType).self, forKey: .\(field.caseCorrectName)) ?? false\n"
-        } else {
-            output += "        self.\(field.caseCorrectName) = try container.decode(\(field.caseCorrectedType).self, forKey: .\(field.caseCorrectName))\n"
-        }
-    }
-    output += "    }\n\n"
-
-    output += "    public func encode(to encoder: Encoder) throws {\n"
-    output += "        var container = encoder.container(keyedBy: CodingKeys.self)\n"
-
-    for field in message.fields {
-        switch field.caseCorrectedType {
-        case "TimeInterval":
-            output += "        let \(field.caseCorrectName)String = String(self.\(field.caseCorrectName)) + \"s\"\n"
-            output += "        try container.encode(\(field.caseCorrectName)String, forKey: .\(field.caseCorrectName))\n"
-        default:
-            output += "        try container.encode(self.\(field.caseCorrectName), forKey: .\(field.caseCorrectName))\n"
-        }
-    }
-
-    output += "    }\n"
-}
-
-/// Writes the custom initializer and encoder for messages with TimeInterval fields.
-///
-/// - Parameters:
-///   - protoEnum: The `ProtoEnum` to write the custom initializer and encoder for.
-///   - output: A mutable string where the generated code will be appended.
-internal func writeCodableInit(for protoEnum: ProtoEnum, to output: inout String, with swiftPrefix: String) {
-    let strippedCases = stripCommonPrefix(from: protoEnum.cases)
-    let pair = zip(
-        strippedCases.map(\.name),
-        protoEnum.cases.map(\.name)
-    )
-    output += "\n"
-    output += "    public init(from decoder: Decoder) throws {\n"
-    output += "        let container = try decoder.singleValueContainer()\n\n"
-    output += "        if let stringValue = try? container.decode(String.self) {\n"
-    output += "            // Convert string to enum\n"
-    output += "            switch stringValue {\n"
-    for (caseName, stringName) in pair {
-        output += "            case \"\(stringName)\":\n"
-        output += "                self = .\(caseName)\n"
-    }
-    output += "            default:\n"
-    output += "                self = .unspecified\n"
-    output += "            }\n"
-    output += "        } else if let intValue = try? container.decode(Int.self) {\n"
-    output += "            // Convert integer to enum\n"
-    output += "            self = \(swiftPrefix)\(protoEnum.name)(rawValue: intValue) ?? .unspecified\n"
-    output += "        } else {\n"
-    output += "            throw DecodingError.dataCorruptedError(in: container, debugDescription: \"Invalid value for MyEnum\")\n"
-    output += "        }\n"
-    output += "    }\n\n"
-
-    output += "    public func encode(to encoder: Encoder) throws {\n"
-    output += "        var container = encoder.singleValueContainer()\n"
-    output += "        switch self {\n"
-    for (caseName, stringName) in pair {
-        output += "        case .\(caseName):\n"
-        output += "            try container.encode(\"\(stringName)\")\n"
-    }
-    output += "        }\n"
-    output += "    }\n"
-}
-
-/// Writes the TimeInterval helper extension if needed.
-///
-/// - Parameters:
-///   - messages: An array of `ProtoMessage` to check for TimeInterval fields.
-///   - output: A mutable string where the generated code will be appended.
-internal func writeTimeIntervalHelper(to output: inout String) {
-    if let fileContents = readFileContents(filename: "TimeInterval+String.swift") {
-        output += "// MARK: - TimeInterval Extension\n"
-        output += fileContents
-            .replacingOccurrences(of: "import Foundation", with: "")
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    } else {
-        output += "// File not found."
-    }
-}
-
-internal func writeDateFormatter(to output: inout String) {
-    output += "\n\n"
-    output += "var dateFormatter: ISO8601DateFormatter {\n"
-    output += "    let formatter = ISO8601DateFormatter()\n"
-    output += "    formatter.formatOptions = [.withFullDate, .withFullTime, .withTimeZone]\n"
-    output += "    return formatter\n"
-    output += "}\n"
-}
-
-func writeDefaultValue(for field: ProtoField, to output: inout String) {
+    var statement: String
     if field.isRepeated {
-        output += " = []"
-    } else if field.type == "bool" {
-        output += " = false"
-    } else if field.isOptional {
-        output += " = nil"
+        let transform = (field.isPrimitiveType || field.type.contains("int"))
+            ? "\(baseType)($0)"
+            : "\(baseType)(proto: $0)"
+        statement = "self.\(name) = proto.\(protoName).compactMap { \(transform) }"
+    } else if field.isMap {
+        statement = "self.\(name) = proto.\(protoName).reduce(into: \(field.caseCorrectedType)()) { result, element in result[element.key] = element.value }"
+    } else if baseType == "TimeInterval" {
+        statement = "self.\(name) = proto.\(protoName).timeInterval"
+    } else if baseType == "Date" {
+        statement = "self.\(name) = proto.\(protoName).date"
+    } else if field.isURL {
+        if field.isOptional {
+            statement = "self.\(name) = URL(string: proto.\(protoName))"
+        } else {
+            statement = """
+            if let \(name) = URL(string: proto.\(protoName)) {
+                self.\(name) = \(name)
+            } else {
+                return nil
+            }
+            """
+        }
+    } else if field.type.contains("int") {
+        statement = "self.\(name) = Int(exactly: proto.\(protoName))!"
+    } else if field.isPrimitiveType {
+        statement = "self.\(name) = proto.\(protoName)"
+    } else if field.isOptional == false {
+        statement = """
+        if let \(name) = \(baseType)(proto: proto.\(protoName)) {
+            self.\(name) = \(name)
+        } else {
+            return nil
+        }
+        """
+    } else {
+        statement = "self.\(name) = \(baseType)(proto: proto.\(protoName))"
+    }
+
+    if field.isOptional {
+        let defaultValue = if field.isRepeated {
+            "[]"
+        } else if field.type == "bool" {
+            "false"
+        } else {
+            "nil"
+        }
+        statement = """
+        if proto.has\(protoName.capitalizingFirstLetter()) {
+            \(statement.split(separator: "\n").joined(separator: "\n    "))
+        } else {
+            self.\(name) = \(defaultValue)
+        }
+        """
+    }
+
+    return statement
+}
+
+// MARK: - Enums
+
+private func enumDecl(
+    for protoEnum: ProtoEnum,
+    swiftPrefix: String,
+    includeProto: Bool,
+    protoPrefix: String
+) throws -> DeclSyntax {
+    let strippedCases = stripCommonPrefix(from: protoEnum.cases)
+    let pairs = zip(
+        strippedCases.map(\.name),
+        protoEnum.cases.map(\.value)
+    )
+
+    var members: [DeclSyntax] = pairs.map { caseName, caseValue in
+        DeclSyntax("case \(raw: caseName) = \(raw: String(caseValue))")
+    }
+
+    if includeProto {
+        members.append(
+            DeclSyntax(
+                try InitializerDeclSyntax(
+                    "internal init?(proto: \(raw: protoPrefix)\(raw: protoEnum.fullName))"
+                ) {
+                    ExprSyntax("self.init(rawValue: proto.rawValue)")
+                }
+            )
+        )
+    }
+
+    let enumDeclaration = try EnumDeclSyntax(
+        "public enum \(raw: swiftPrefix)\(raw: protoEnum.name): Int, CaseIterable, Hashable, Equatable, Sendable"
+    ) {
+        for member in members {
+            member
+        }
+    }
+
+    if let parent = protoEnum.parentName {
+        let extensionDeclaration = try ExtensionDeclSyntax(
+            "extension \(raw: swiftPrefix)\(raw: parent)"
+        ) {
+            enumDeclaration
+        }
+        return DeclSyntax(extensionDeclaration)
+    } else {
+        return DeclSyntax(enumDeclaration)
     }
 }

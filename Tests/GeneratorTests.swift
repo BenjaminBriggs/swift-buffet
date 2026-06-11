@@ -2,7 +2,7 @@ import XCTest
 @testable import SwiftBuffet
 
 final class GeneratorTests: XCTestCase {
-    func testGenerateSimpleMessage() {
+    func testGenerateSimpleMessage() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -43,7 +43,7 @@ final class GeneratorTests: XCTestCase {
         let messages = [simpleMessageProtoMessage]
         let enums: [ProtoEnum] = []
 
-        let generatedCode = generateSwiftCode(
+        let generatedCode = try generateSwiftCode(
             from: messages,
             enums: enums,
             with: "App",
@@ -65,7 +65,7 @@ final class GeneratorTests: XCTestCase {
         XCTAssertTrue(generatedCode.contains("public let _localID = UUID()"), "The generated code should a `localID` property")
     }
 
-    func testGenerateNestedMessage() {
+    func testGenerateNestedMessage() throws {
         let addressProtoMessage = ProtoMessage(
             name: "Address",
             fields: [
@@ -143,7 +143,7 @@ final class GeneratorTests: XCTestCase {
         let messages = [personProtoMessage, addressProtoMessage]
         let enums: [ProtoEnum] = []
 
-        let generatedCode = generateSwiftCode(
+        let generatedCode = try generateSwiftCode(
             from: messages,
             enums: enums,
             with: "App",
@@ -166,7 +166,7 @@ final class GeneratorTests: XCTestCase {
         XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoAddress)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoAddress'")
     }
 
-    func testGenerateNestedEnumAndWellKnownTypes() {
+    func testGenerateNestedEnumAndWellKnownTypes() throws {
         let personProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -247,7 +247,7 @@ final class GeneratorTests: XCTestCase {
         let messages = [personProtoMessage]
         let enums = [genderProtoEnum]
 
-        let generatedCode = generateSwiftCode(
+        let generatedCode = try generateSwiftCode(
             from: messages,
             enums: enums,
             with: "App",
@@ -271,7 +271,7 @@ final class GeneratorTests: XCTestCase {
         XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
     }
 
-    func testLocalIDs() {
+    func testLocalIDs() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -310,7 +310,7 @@ final class GeneratorTests: XCTestCase {
         let messages = [simpleMessageProtoMessage, simpleMessageProtoMessageNoLocalID]
         let enums: [ProtoEnum] = []
 
-        let generatedCode = generateSwiftCode(
+        let generatedCode = try generateSwiftCode(
             from: messages,
             enums: enums,
             with: "App",

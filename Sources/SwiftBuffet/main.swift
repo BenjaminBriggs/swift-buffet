@@ -59,7 +59,7 @@ struct SwiftBuffet: ParsableCommand {
             quite: quite
         )
        
-        let swiftCode = generateSwiftCode(
+        let swiftCode = try generateSwiftCode(
             from: messages,
             enums: enums,
             with: swiftPrefix,
