@@ -3,7 +3,7 @@ import XCTest
 
 final class ParserTests: XCTestCase {
     func testParseSimpleMessage() throws {
-        var protoFileContent = """
+        let protoFileContent = """
         syntax = "proto3";
 
         message Person {
@@ -13,13 +13,7 @@ final class ParserTests: XCTestCase {
         }
         """
 
-        let (messages, enums) = parseContent(
-            &protoFileContent,
-            parent: nil,
-            with: "MyApp",
-            verbose: false,
-            quite: true
-        )
+        let (messages, enums) = try parseProto(protoFileContent, swiftPrefix: "MyApp")
 
         XCTAssertEqual(messages.count, 1, "Expected to find 1 message, but got \(messages.count)")
         XCTAssertEqual(enums.count, 0, "Expected to find 0 enums, but got \(enums.count)")
@@ -38,7 +32,7 @@ final class ParserTests: XCTestCase {
     }
 
     func testParseNestedMessage() throws {
-        var protoFileContent = """
+        let protoFileContent = """
         syntax = "proto3";
 
         message Person {
@@ -54,13 +48,7 @@ final class ParserTests: XCTestCase {
         }
         """
 
-        let (messages, enums) = parseContent(
-            &protoFileContent,
-            parent: nil,
-            with: "MyApp",
-            verbose: false,
-            quite: true
-        )
+        let (messages, enums) = try parseProto(protoFileContent, swiftPrefix: "MyApp")
 
         XCTAssertEqual(messages.count, 2, "Expected to find 2 messages, but got \(messages.count)")
         XCTAssertEqual(enums.count, 0, "Expected to find 0 enums, but got \(enums.count)")
@@ -77,7 +65,7 @@ final class ParserTests: XCTestCase {
     }
 
     func testParseNestedEnumAndWellKnownTypes() throws {
-        var protoFileContent = """
+        let protoFileContent = """
             syntax = "proto3";
 
             import "google/protobuf/duration.proto";
@@ -98,13 +86,7 @@ final class ParserTests: XCTestCase {
             }
             """
 
-        let (messages, enums) = parseContent(
-            &protoFileContent,
-            parent: nil,
-            with: "MyApp",
-            verbose: false,
-            quite: true
-        )
+        let (messages, enums) = try parseProto(protoFileContent, swiftPrefix: "MyApp")
 
         XCTAssertEqual(messages.count, 1, "Expected to find 1 message, but got \(messages.count)")
         XCTAssertEqual(enums.count, 1, "Expected to find 1 enum, but got \(enums.count)")

@@ -11,9 +11,26 @@ internal func parseProtoFile(
     verbose: Bool,
     quite: Bool
 ) throws -> ([ProtoMessage], [ProtoEnum]) {
-    var content = try String(contentsOf: path)
+    let content = try String(contentsOf: path)
+    return try parseProto(
+        content,
+        swiftPrefix: swiftPrefix,
+        verbose: verbose,
+        quite: quite
+    )
+}
+
+/// Stable parsing entry point. The implementation behind this function is
+/// replaced in later phases; its contract is pinned by the test corpus.
+func parseProto(
+    _ content: String,
+    swiftPrefix: String,
+    verbose: Bool = false,
+    quite: Bool = true
+) throws -> ([ProtoMessage], [ProtoEnum]) {
+    var mutableContent = content
     return parseContent(
-        &content,
+        &mutableContent,
         parent: nil,
         with: swiftPrefix,
         verbose: verbose,
