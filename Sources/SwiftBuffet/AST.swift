@@ -40,16 +40,17 @@ func flatten(
     var messages: [ProtoMessage] = []
     var enums: [ProtoEnum] = []
 
-    func visit(_ node: MessageNode, parent: String?) {
+    func visit(_ node: MessageNode, parentPath: [String]) {
+        let childPath = parentPath + [node.name]
         for child in node.messages {
-            visit(child, parent: node.name)
+            visit(child, parentPath: childPath)
         }
         for childEnum in node.enums {
             enums.append(
                 ProtoEnum(
                     name: childEnum.name,
                     cases: childEnum.cases,
-                    parentName: node.name
+                    parentPath: childPath
                 )
             )
         }
@@ -68,20 +69,20 @@ func flatten(
                         isDeprecated: field.isDeprecated
                     )
                 },
-                parentName: parent
+                parentPath: parentPath
             )
         )
     }
 
     for message in file.messages {
-        visit(message, parent: nil)
+        visit(message, parentPath: [])
     }
     for topLevelEnum in file.enums {
         enums.append(
             ProtoEnum(
                 name: topLevelEnum.name,
                 cases: topLevelEnum.cases,
-                parentName: nil
+                parentPath: []
             )
         )
     }

@@ -348,6 +348,72 @@ final class GeneratorTests: XCTestCase {
         XCTAssertTrue(generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)"))
     }
 
+    func testNestedMessageProtoInitUsesFullProtoTypeName() throws {
+        let inner = ProtoMessage(
+            name: "Inner",
+            fields: [
+                ProtoField(
+                    swiftPrefix: "App",
+                    name: "value",
+                    type: "string",
+                    comment: nil,
+                    isOptional: false,
+                    isRepeated: false,
+                    isMap: false,
+                    isDeprecated: false
+                )
+            ],
+            parentPath: ["Outer", "Middle"]
+        )
+
+        let generated = try generateSwiftCode(
+            from: [inner],
+            enums: [],
+            with: "App",
+            includeProto: true,
+            includeLocalIDFor: nil,
+            includeBackingData: false,
+            with: "Proto"
+        )
+
+        XCTAssertTrue(generated.contains("internal init?(proto: ProtoOuter.Middle.Inner)"),
+                      "Nested messages must reference the fully-qualified SwiftProtobuf type")
+        XCTAssertTrue(generated.contains("try? ProtoOuter.Middle.Inner(serializedBytes: data)"))
+        XCTAssertFalse(generated.contains("ProtoInner"))
+    }
+
+    func testDuplicateSwiftTypeNamesThrow() {
+        let field = ProtoField(
+            swiftPrefix: "App",
+            name: "value",
+            type: "string",
+            comment: nil,
+            isOptional: false,
+            isRepeated: false,
+            isMap: false,
+            isDeprecated: false
+        )
+        let first = ProtoMessage(name: "Item", fields: [field], parentPath: ["Order"])
+        let second = ProtoMessage(name: "Item", fields: [field], parentPath: ["Invoice"])
+
+        XCTAssertThrowsError(
+            try generateSwiftCode(
+                from: [first, second],
+                enums: [],
+                with: "App",
+                includeProto: false,
+                includeLocalIDFor: nil,
+                includeBackingData: false,
+                with: "Proto"
+            )
+        ) { error in
+            let description = String(describing: error)
+            XCTAssertTrue(description.contains("AppItem"))
+            XCTAssertTrue(description.contains("Order.Item"))
+            XCTAssertTrue(description.contains("Invoice.Item"))
+        }
+    }
+
     func testLocalIDs() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",

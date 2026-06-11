@@ -297,6 +297,26 @@ final class ParserCorpusTests: XCTestCase {
         )
     }
 
+    func testDeepNestingPreservesFullParentPath() throws {
+        let proto = """
+        message A {
+        message B {
+        enum Status {
+        STATUS_UNSPECIFIED = 0;
+        }
+        Status status = 1;
+        }
+        }
+        """
+        let (messages, enums) = try parseProto(proto, swiftPrefix: "")
+        let b = messages.first { $0.name == "B" }!
+        XCTAssertEqual(b.parentName, "A")
+        XCTAssertEqual(b.fullName, "A.B")
+        let status = enums.first { $0.name == "Status" }!
+        XCTAssertEqual(status.parentName, "B")
+        XCTAssertEqual(status.fullName, "A.B.Status")
+    }
+
     func testKeywordLikeFieldNames() throws {
         let proto = """
         message Config {

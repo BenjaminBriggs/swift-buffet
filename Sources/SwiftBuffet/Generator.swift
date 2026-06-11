@@ -13,6 +13,19 @@ struct GenerationError: Error, CustomStringConvertible {
     }
 }
 
+/// Thrown when two proto types would flatten to the same Swift type name.
+///
+/// All structs are generated at the top level, so `Order.Item` and
+/// `Invoice.Item` would both become `<prefix>Item` — a duplicate-symbol
+/// compile error in the consumer's build if it were allowed through.
+struct DuplicateTypeNameError: Error, CustomStringConvertible {
+    let swiftName: String
+    let protoNames: [String]
+    var description: String {
+        "Cannot generate: \(protoNames.joined(separator: " and ")) would both produce the Swift type '\(swiftName)'. Rename one of them."
+    }
+}
+
 /// Generates Swift code from protocol buffer messages and enums.
 ///
 /// - Parameters:
@@ -29,6 +42,15 @@ func generateSwiftCode(
     includeBackingData: Bool,
     with protoPrefix: String
 ) throws -> String {
+    let duplicates = Dictionary(grouping: messages) { $0.name }
+        .filter { $0.value.count > 1 }
+    if let (name, collisions) = duplicates.min(by: { $0.key < $1.key }) {
+        throw DuplicateTypeNameError(
+            swiftName: "\(swiftPrefix)\(name)",
+            protoNames: collisions.map(\.fullName).sorted()
+        )
+    }
+
     var declarations: [DeclSyntax] = [DeclSyntax("import Foundation")]
 
     let sortedMessages = messages.sorted { $0.name < $1.name }
@@ -185,7 +207,7 @@ private func dataInit(
     return try InitializerDeclSyntax("public init?(data: Data)") {
         ExprSyntax(
             """
-            if let proto = try? \(raw: protoPrefix)\(raw: message.name)(serializedBytes: data) {
+            if let proto = try? \(raw: protoPrefix)\(raw: message.fullName)(serializedBytes: data) {
                 self.init(proto: proto)\(raw: backingDataAssignment)
             } else {
                 return nil
@@ -199,7 +221,7 @@ private func protoInit(
     for message: ProtoMessage,
     protoPrefix: String
 ) throws -> InitializerDeclSyntax {
-    try InitializerDeclSyntax("internal init?(proto: \(raw: protoPrefix)\(raw: message.name))") {
+    try InitializerDeclSyntax("internal init?(proto: \(raw: protoPrefix)\(raw: message.fullName))") {
         for field in message.fields {
             ExprSyntax("\(raw: protoInitStatement(for: field))")
         }

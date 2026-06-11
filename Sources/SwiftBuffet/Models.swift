@@ -6,16 +6,32 @@ struct ProtoMessage {
     let name: String
     /// The fields of the message.
     let fields: [ProtoField]
-    /// The name of the parent message, if nested.
-    let parentName: String?
+    /// The names of the enclosing messages, outermost first.
+    let parentPath: [String]
 
-    /// The full name of the message, including parent name if nested.
+    init(name: String, fields: [ProtoField], parentPath: [String]) {
+        self.name = name
+        self.fields = fields
+        self.parentPath = parentPath
+    }
+
+    /// Convenience for a message with at most one enclosing message.
+    init(name: String, fields: [ProtoField], parentName: String?) {
+        self.init(
+            name: name,
+            fields: fields,
+            parentPath: parentName.map { [$0] } ?? []
+        )
+    }
+
+    /// The name of the immediately enclosing message, if nested.
+    var parentName: String? {
+        parentPath.last
+    }
+
+    /// The fully-qualified dotted name, matching SwiftProtobuf's nesting.
     var fullName: String {
-        if let parentName {
-            return "\(parentName).\(name)"
-        } else {
-            return name
-        }
+        (parentPath + [name]).joined(separator: ".")
     }
 }
 
@@ -133,16 +149,32 @@ struct ProtoEnum {
     let name: String
     /// The cases of the enum.
     let cases: [ProtoEnumCase]
-    /// The name of the parent message, if any.
-    let parentName: String?
+    /// The names of the enclosing messages, outermost first.
+    let parentPath: [String]
 
-    /// The full name of the enum, including parent name if present.
+    init(name: String, cases: [ProtoEnumCase], parentPath: [String]) {
+        self.name = name
+        self.cases = cases
+        self.parentPath = parentPath
+    }
+
+    /// Convenience for an enum with at most one enclosing message.
+    init(name: String, cases: [ProtoEnumCase], parentName: String?) {
+        self.init(
+            name: name,
+            cases: cases,
+            parentPath: parentName.map { [$0] } ?? []
+        )
+    }
+
+    /// The name of the immediately enclosing message, if nested.
+    var parentName: String? {
+        parentPath.last
+    }
+
+    /// The fully-qualified dotted name, matching SwiftProtobuf's nesting.
     var fullName: String {
-        if let parentName {
-            return "\(parentName).\(name)"
-        } else {
-            return name
-        }
+        (parentPath + [name]).joined(separator: ".")
     }
 }
 
