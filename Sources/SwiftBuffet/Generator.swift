@@ -7,9 +7,49 @@ import SwiftParser
 /// This is the final validation gate: codegen fails here rather than in the
 /// consumer's build.
 struct GenerationError: Error, CustomStringConvertible {
-    let generated: String
+    let line: Int?
+    let excerpt: String
+
     var description: String {
-        "Internal error: generated Swift failed to parse. Please report this.\n\(generated)"
+        let location = line.map { " at line \($0)" } ?? ""
+        return "Internal error: generated Swift failed to parse\(location). Please report this. Context:\n\(excerpt)"
+    }
+
+    init(generated: String, tree: SourceFileSyntax) {
+        let finder = FirstSyntaxErrorFinder(viewMode: .all)
+        finder.walk(tree)
+
+        if let position = finder.position {
+            let converter = SourceLocationConverter(
+                fileName: "generated.swift",
+                tree: tree
+            )
+            let errorLine = converter.location(for: position).line
+            let lines = generated.split(separator: "\n", omittingEmptySubsequences: false)
+            let window = lines[max(0, errorLine - 6)..<min(lines.count, errorLine + 5)]
+            self.line = errorLine
+            self.excerpt = window.joined(separator: "\n")
+        } else {
+            self.line = nil
+            self.excerpt = generated
+        }
+    }
+}
+
+/// Finds the position of the first missing or unexpected token in a tree.
+private final class FirstSyntaxErrorFinder: SyntaxAnyVisitor {
+    var position: AbsolutePosition?
+
+    override func visitAny(_ node: Syntax) -> SyntaxVisitorContinueKind {
+        if position != nil || node.hasError == false {
+            return .skipChildren
+        }
+        if node.is(UnexpectedNodesSyntax.self)
+            || node.as(TokenSyntax.self)?.presence == .missing {
+            position = node.positionAfterSkippingLeadingTrivia
+            return .skipChildren
+        }
+        return .visitChildren
     }
 }
 
@@ -98,7 +138,7 @@ func generateSwiftCode(
 
     let reparsed = SwiftParser.Parser.parse(source: text)
     guard reparsed.hasError == false else {
-        throw GenerationError(generated: text)
+        throw GenerationError(generated: text, tree: reparsed)
     }
 
     return text

@@ -41,6 +41,32 @@ enum TokenKind: Equatable {
     case eof
 }
 
+extension TokenKind: CustomStringConvertible {
+    /// The user-facing spelling used in parse error messages.
+    var description: String {
+        switch self {
+        case .identifier(let text): "'\(text)'"
+        case .intLiteral(let value): "'\(value)'"
+        case .stringLiteral(let text): "\"\(text)\""
+        case .docComment: "a comment"
+        case .openBrace: "'{'"
+        case .closeBrace: "'}'"
+        case .equals: "'='"
+        case .semicolon: "';'"
+        case .openAngle: "'<'"
+        case .closeAngle: "'>'"
+        case .comma: "','"
+        case .openBracket: "'['"
+        case .closeBracket: "']'"
+        case .openParen: "'('"
+        case .closeParen: "')'"
+        case .dot: "'.'"
+        case .unknown(let character): "'\(character)'"
+        case .eof: "end of file"
+        }
+    }
+}
+
 /// A token with its 1-based source position.
 struct Token: Equatable {
     let kind: TokenKind

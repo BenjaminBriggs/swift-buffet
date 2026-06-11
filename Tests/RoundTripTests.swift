@@ -1,9 +1,11 @@
 import XCTest
-import SwiftParser
 @testable import SwiftBuffet
 
 /// Round-trip validation: every proto in the corpus must generate Swift that
 /// parses with zero diagnostics, across all generator flag combinations.
+/// The parse check itself is generateSwiftCode's internal validation gate,
+/// which throws GenerationError on any diagnostic — this suite drives that
+/// gate across the corpus and flag matrix.
 final class RoundTripTests: XCTestCase {
 
     private let corpus: [String: String] = [
@@ -82,20 +84,19 @@ final class RoundTripTests: XCTestCase {
             let (messages, enums) = try parseProto(proto, swiftPrefix: "App")
             for includeProto in [false, true] {
                 for backingData in [false, true] {
-                    let generated = try generateSwiftCode(
-                        from: messages,
-                        enums: enums,
-                        with: "App",
-                        includeProto: includeProto,
-                        includeLocalIDFor: messages.map(\.name),
-                        includeBackingData: backingData,
-                        with: "Proto"
-                    )
-                    let tree = Parser.parse(source: generated)
-                    XCTAssertFalse(
-                        tree.hasError,
-                        "Generated Swift for corpus entry '\(label)' (includeProto: \(includeProto), backingData: \(backingData)) has syntax errors:\n\(generated)"
-                    )
+                    do {
+                        _ = try generateSwiftCode(
+                            from: messages,
+                            enums: enums,
+                            with: "App",
+                            includeProto: includeProto,
+                            includeLocalIDFor: messages.map(\.name),
+                            includeBackingData: backingData,
+                            with: "Proto"
+                        )
+                    } catch {
+                        XCTFail("Corpus entry '\(label)' (includeProto: \(includeProto), backingData: \(backingData)) failed: \(error)")
+                    }
                 }
             }
         }

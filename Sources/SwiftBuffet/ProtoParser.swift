@@ -4,9 +4,10 @@ import Foundation
 /// SwiftBuffet generates code for.
 ///
 /// Header statements (`syntax`, `package`, `import`, `option`) are consumed
-/// and ignored. Constructs the generator has no representation for (`oneof`,
-/// `service`, `extend`) are skipped with a warning. `reserved` statements are
-/// skipped silently. Anything malformed throws `ParseError`.
+/// and ignored. `oneof` members become ordinary fields of the enclosing
+/// message. Constructs the generator has no representation for (`service`,
+/// `extend`) are skipped with a warning; `reserved` statements and option
+/// lists are skipped silently. Anything else malformed throws `ParseError`.
 struct ProtoParser {
 
     static func parse(_ source: String, quite: Bool) throws -> ProtoFileNode {
@@ -58,7 +59,7 @@ struct ProtoParser {
     private mutating func parseMessage() throws -> MessageNode {
         advance() // "message"
         let name = try expectIdentifier(description: "a message name")
-        try expect(.openBrace, description: "'{'")
+        try expect(.openBrace)
         var node = MessageNode(name: name)
 
         while peek().kind != .closeBrace {
@@ -84,7 +85,7 @@ struct ProtoParser {
                 node.fields.append(try parseField(comment: comment))
             }
         }
-        try expect(.closeBrace, description: "'}'")
+        try expect(.closeBrace)
         return node
     }
 
@@ -94,7 +95,7 @@ struct ProtoParser {
     private mutating func parseOneofMembers(into node: inout MessageNode) throws {
         advance() // "oneof"
         advance() // name
-        try expect(.openBrace, description: "'{'")
+        try expect(.openBrace)
         while peek().kind != .closeBrace {
             let comment = takeDocComments()
             if peek().kind == .closeBrace {
@@ -106,7 +107,7 @@ struct ProtoParser {
             }
             node.fields.append(try parseField(comment: comment))
         }
-        try expect(.closeBrace, description: "'}'")
+        try expect(.closeBrace)
     }
 
     private mutating func parseField(comment: String?) throws -> FieldNode {
@@ -126,11 +127,11 @@ struct ProtoParser {
         if case .identifier("map") = peek().kind, peekNext().kind == .openAngle {
             isMap = true
             advance() // "map"
-            try expect(.openAngle, description: "'<'")
+            try expect(.openAngle)
             let keyType = try parseTypeName()
-            try expect(.comma, description: "','")
+            try expect(.comma)
             let valueType = try parseTypeName()
-            try expect(.closeAngle, description: "'>'")
+            try expect(.closeAngle)
             // Legacy model shape: map types are stored as "<key, value>".
             type = "<\(keyType), \(valueType)>"
         } else {
@@ -138,14 +139,14 @@ struct ProtoParser {
         }
 
         let name = try expectIdentifier(description: "a field name")
-        try expect(.equals, description: "'='")
+        try expect(.equals)
         guard case .intLiteral = peek().kind else {
             throw unexpected(expected: "a field number")
         }
         advance()
 
         let isDeprecated = try parseFieldOptions()
-        try expect(.semicolon, description: "';'")
+        try expect(.semicolon)
 
         return FieldNode(
             name: name,
@@ -192,7 +193,7 @@ struct ProtoParser {
     private mutating func parseEnum() throws -> EnumNode {
         advance() // "enum"
         let name = try expectIdentifier(description: "an enum name")
-        try expect(.openBrace, description: "'{'")
+        try expect(.openBrace)
         var node = EnumNode(name: name)
 
         while peek().kind != .closeBrace {
@@ -211,16 +212,16 @@ struct ProtoParser {
             }
 
             let caseName = try expectIdentifier(description: "an enum case name")
-            try expect(.equals, description: "'='")
+            try expect(.equals)
             guard case .intLiteral(let value) = peek().kind else {
                 throw unexpected(expected: "an enum case value")
             }
             advance()
             _ = try parseFieldOptions()
-            try expect(.semicolon, description: "';'")
+            try expect(.semicolon)
             node.cases.append(ProtoEnumCase(name: caseName, value: value))
         }
-        try expect(.closeBrace, description: "'}'")
+        try expect(.closeBrace)
         return node
     }
 
@@ -334,10 +335,10 @@ struct ProtoParser {
 
     private mutating func expect(
         _ kind: TokenKind,
-        description: String
+        description: String? = nil
     ) throws {
         guard peek().kind == kind else {
-            throw unexpected(expected: description)
+            throw unexpected(expected: description ?? kind.description)
         }
         advance()
     }
@@ -352,32 +353,11 @@ struct ProtoParser {
 
     private func unexpected(expected: String) -> ParseError {
         let token = peek()
-        let found: String
-        switch token.kind {
-        case .identifier(let text): found = "'\(text)'"
-        case .intLiteral(let value): found = "'\(value)'"
-        case .stringLiteral(let text): found = "\"\(text)\""
-        case .docComment: found = "a comment"
-        case .openBrace: found = "'{'"
-        case .closeBrace: found = "'}'"
-        case .equals: found = "'='"
-        case .semicolon: found = "';'"
-        case .openAngle: found = "'<'"
-        case .closeAngle: found = "'>'"
-        case .comma: found = "','"
-        case .openBracket: found = "'['"
-        case .closeBracket: found = "']'"
-        case .openParen: found = "'('"
-        case .closeParen: found = "')'"
-        case .dot: found = "'.'"
-        case .unknown(let character): found = "'\(character)'"
-        case .eof: found = "end of file"
-        }
         return ParseError(
             line: token.line,
             column: token.column,
             expected: expected,
-            found: found
+            found: token.kind.description
         )
     }
 }
