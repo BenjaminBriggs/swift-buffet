@@ -175,7 +175,7 @@ import Foundation
     /** Trailing file-level comment. */
     """#
 
-    @Test func parsesEveryConstruct() throws {
+    @Test func `Parses every construct`() throws {
         let (messages, enums) = try parseProto(Self.torture, swiftPrefix: "App")
 
         #expect(Set(messages.map(\.name)) == ["BuffetMeta", "TorturePrimary", "NestedLevel1", "NestedLevel2",
@@ -184,7 +184,7 @@ import Foundation
         #expect(enums.count == 6, "Both shadowed Status enums must survive")
     }
 
-    @Test func primaryMessageFields() throws {
+    @Test func `Primary message fields`() throws {
         let (messages, _) = try parseProto(Self.torture, swiftPrefix: "App")
         let primary = messages.first { $0.name == "TorturePrimary" }!
         let fieldsByName = Dictionary(
@@ -221,7 +221,7 @@ import Foundation
         #expect(fieldsByName["session_length"]!.caseCorrectedBaseType == "TimeInterval")
     }
 
-    @Test func deepNestingAndEnumValues() throws {
+    @Test func `Deep nesting and enum values`() throws {
         let (_, enums) = try parseProto(Self.torture, swiftPrefix: "App")
 
         let deep = enums.first { $0.name == "DeepEnum" }!
@@ -233,7 +233,7 @@ import Foundation
         #expect(aliased.cases.map(\.value) == [0, 1, 1])
     }
 
-    @Test func generatesValidSwift() throws {
+    @Test func `Generates valid swift`() throws {
         let (messages, enums) = try parseProto(Self.torture, swiftPrefix: "App")
 
         // The internal SwiftParser gate throws if the output is not valid Swift.

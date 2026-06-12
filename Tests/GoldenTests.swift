@@ -24,7 +24,7 @@ import Foundation
         )
     }
 
-    @Test func goldenExampleProto() throws {
+    @Test func `Golden example proto`() throws {
         let proto = """
         syntax = "proto3";
 
@@ -133,7 +133,7 @@ import Foundation
         #expect(generated == expected)
     }
 
-    @Test func goldenKitchenSink() throws {
+    @Test func `Golden kitchen sink`() throws {
         let proto = """
         syntax = "proto3";
         package com.example;

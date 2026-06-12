@@ -15,30 +15,30 @@ import Foundation
              .eof])
     }
 
-    @Test func identifiersAndKeywordsAreIdentifiers() throws {
+    @Test func `Identifiers and keywords are identifiers`() throws {
         #expect(try kinds("message optional foo_bar Baz9") == [.identifier("message"), .identifier("optional"),
              .identifier("foo_bar"), .identifier("Baz9"), .eof])
     }
 
-    @Test func intLiterals() throws {
+    @Test func `Int literals`() throws {
         #expect(try kinds("0 42 -7") == [.intLiteral(0), .intLiteral(42), .intLiteral(-7), .eof])
     }
 
-    @Test func stringLiteral() throws {
+    @Test func `String literal`() throws {
         #expect(try kinds(#"import "google/protobuf/duration.proto";"#) == [.identifier("import"),
              .stringLiteral("google/protobuf/duration.proto"),
              .semicolon, .eof])
     }
 
-    @Test func docCommentCapturedVerbatim() throws {
+    @Test func `Doc comment captured verbatim`() throws {
         #expect(try kinds("/** hi there */ string") == [.docComment("/** hi there */"), .identifier("string"), .eof])
     }
 
-    @Test func lineCommentsSkipped() throws {
+    @Test func `Line comments skipped`() throws {
         #expect(try kinds("foo // comment text ; { }\nbar") == [.identifier("foo"), .identifier("bar"), .eof])
     }
 
-    @Test func plainBlockCommentsSkipped() throws {
+    @Test func `Plain block comments skipped`() throws {
         #expect(try kinds("foo /* not a doc comment */ bar") == [.identifier("foo"), .identifier("bar"), .eof])
     }
 
@@ -57,24 +57,24 @@ import Foundation
         #expect(closeBrace.column == 1)
     }
 
-    @Test func unterminatedStringThrows() {
+    @Test func `Unterminated string throws`() {
         let error = #expect(throws: ParseError.self) {
             try Lexer.tokenize(#"option x = "unclosed"#)
         }
         #expect(error?.line == 1)
     }
 
-    @Test func unterminatedBlockCommentThrows() {
+    @Test func `Unterminated block comment throws`() {
         #expect(throws: ParseError.self) {
             try Lexer.tokenize("foo /** never closed")
         }
     }
 
-    @Test func unknownCharactersBecomeTokens() throws {
+    @Test func `Unknown characters become tokens`() throws {
         #expect(try kinds("get: \"/v1\"") == [.identifier("get"), .unknown(":"), .stringLiteral("/v1"), .eof])
     }
 
-    @Test func unknownCharacterInParsedPositionThrows() {
+    @Test func `Unknown character in parsed position throws`() {
         let error = #expect(throws: ParseError.self) {
             try ProtoParser.parse("message § {}", verbose: false)
         }

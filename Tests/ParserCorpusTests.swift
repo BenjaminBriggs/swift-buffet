@@ -8,7 +8,7 @@ import Foundation
 /// recursive-descent migration, including inputs the regex parser mishandled.
 @Suite struct ParserCorpusTests {
 
-    @Test func emptyMessageSingleLine() throws {
+    @Test func `Empty message single line`() throws {
         let proto = "message Empty {}"
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
         #expect(enums.count == 0)
@@ -17,7 +17,7 @@ import Foundation
         #expect(messages.first?.fields.count == 0)
     }
 
-    @Test func simpleMessageFieldTypes() throws {
+    @Test func `Simple message field types`() throws {
         let proto = """
         message Person {
         string name = 1;
@@ -36,7 +36,7 @@ import Foundation
         #expect(fields.allSatisfy { $0.isDeprecated == false })
     }
 
-    @Test func multipleTopLevelDeclarations() throws {
+    @Test func `Multiple top level declarations`() throws {
         let proto = """
         message A {
         string x = 1;
@@ -59,7 +59,7 @@ import Foundation
         #expect(enums.first?.parentName == nil)
     }
 
-    @Test func nestedMessageTwoLevels() throws {
+    @Test func `Nested message two levels`() throws {
         let proto = """
         message Outer {
         string a = 1;
@@ -84,7 +84,7 @@ import Foundation
         #expect(inner?.fields.map(\.name) == ["c"])
     }
 
-    @Test func nestedEnumInMessage() throws {
+    @Test func `Nested enum in message`() throws {
         let proto = """
         message Person {
         enum Gender {
@@ -102,7 +102,7 @@ import Foundation
         #expect(messages.first?.fields.map(\.type) == ["Gender"])
     }
 
-    @Test func optionalAndRepeatedFields() throws {
+    @Test func `Optional and repeated fields`() throws {
         let proto = """
         message Bag {
         optional string label = 1;
@@ -117,7 +117,7 @@ import Foundation
         #expect(fields[1].isOptional == false)
     }
 
-    @Test func mapFields() throws {
+    @Test func `Map fields`() throws {
         let proto = """
         message Lookup {
         map<string, int32> scores = 1;
@@ -136,7 +136,7 @@ import Foundation
         #expect(lookup.fields[1].caseCorrectedBaseType == "[String: Person]")
     }
 
-    @Test func deprecatedFieldOption() throws {
+    @Test func `Deprecated field option`() throws {
         let proto = """
         message Address {
         string street = 1 [deprecated = true];
@@ -148,7 +148,7 @@ import Foundation
         #expect(messages[0].fields[1].isDeprecated == false)
     }
 
-    @Test func docCommentOnField() throws {
+    @Test func `Doc comment on field`() throws {
         let proto = """
         message Person {
         /** The person's legal name. */
@@ -164,7 +164,7 @@ import Foundation
         #expect(ageField.comment == nil)
     }
 
-    @Test func enumCommonPrefixCases() throws {
+    @Test func `Enum common prefix cases`() throws {
         let proto = """
         enum Gender {
         GENDER_UNKNOWN = 0;
@@ -180,14 +180,14 @@ import Foundation
         #expect(stripped.map(\.name) == ["unknown", "male", "female"])
     }
 
-    @Test func singleCaseEnumKeepsAUsableName() throws {
+    @Test func `Single case enum keeps a usable name`() throws {
         let stripped = stripCommonPrefix(from: [
             ProtoEnumCase(name: "S_UNKNOWN", value: 0)
         ])
         #expect(stripped.map(\.name) == ["sUnknown"], "A single case is its own common prefix and must not be stripped")
     }
 
-    @Test func prefixEqualToWholeCaseNameIsNotStripped() throws {
+    @Test func `Prefix equal to whole case name is not stripped`() throws {
         let stripped = stripCommonPrefix(from: [
             ProtoEnumCase(name: "GENDER", value: 0),
             ProtoEnumCase(name: "GENDER_MALE", value: 1)
@@ -195,7 +195,7 @@ import Foundation
         #expect(stripped.map(\.name) == ["gender", "genderMale"], "Stripping must back off entirely when it would empty a name")
     }
 
-    @Test func headerStatementsIgnored() throws {
+    @Test func `Header statements ignored`() throws {
         let proto = """
         syntax = "proto3";
         package com.example.app;
@@ -212,21 +212,21 @@ import Foundation
         #expect(messages[0].fields[0].type == "google.protobuf.Timestamp")
     }
 
-    @Test func variedWhitespace() throws {
+    @Test func `Varied whitespace`() throws {
         let proto = "message A {\n\tstring x = 1;\n\n\n  int32   y   =   2 ;\n}"
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
         #expect(messages.count == 1)
         #expect(messages[0].fields.map(\.name) == ["x", "y"])
     }
 
-    @Test func closingBraceOnSameLineAsField() throws {
+    @Test func `Closing brace on same line as field`() throws {
         let proto = "message A { string x = 1; }"
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
         #expect(messages.count == 1)
         #expect(messages.first?.fields.map(\.name) == ["x"])
     }
 
-    @Test func closingBraceIndented() throws {
+    @Test func `Closing brace indented`() throws {
         let proto = """
         message A {
             string x = 1;
@@ -237,7 +237,7 @@ import Foundation
         #expect(messages.first?.fields.map(\.name) == ["x"])
     }
 
-    @Test func docCommentsInAllPositions() throws {
+    @Test func `Doc comments in all positions`() throws {
         let proto = """
         /** File-level overview comment. */
         message Person {
@@ -263,7 +263,7 @@ import Foundation
         #expect(enums[0].cases.map(\.name) == ["PLAN_FREE"])
     }
 
-    @Test func customParenthesizedFieldOptions() throws {
+    @Test func `Custom parenthesized field options`() throws {
         let proto = """
         message User {
         string email = 1 [(validate.rules).string.min_len = 1];
@@ -280,7 +280,7 @@ import Foundation
         #expect(messages[0].fields[3].isDeprecated)
     }
 
-    @Test func aggregateOptionValuesIgnored() throws {
+    @Test func `Aggregate option values ignored`() throws {
         let proto = """
         syntax = "proto3";
         option (my.file_option) = { key: "value" nested: { flag: true } };
@@ -295,7 +295,7 @@ import Foundation
         #expect(messages[0].fields.map(\.name) == ["path"])
     }
 
-    @Test func dottedCustomOptionEndingInDeprecatedIsNotDeprecated() throws {
+    @Test func `Dotted custom option ending in deprecated is not deprecated`() throws {
         let proto = """
         message M {
         int32 a = 1 [(my.ext).deprecated = true];
@@ -307,7 +307,7 @@ import Foundation
         #expect(messages[0].fields[1].isDeprecated, "deprecated = true after a comma is the standard option")
     }
 
-    @Test func oneofMembersBecomeFields() throws {
+    @Test func `Oneof members become fields`() throws {
         let proto = """
         message Event {
         string id = 1;
@@ -323,7 +323,7 @@ import Foundation
         #expect(messages[0].fields.map(\.name) == ["id", "click", "view", "source"])
     }
 
-    @Test func deepNestingPreservesFullParentPath() throws {
+    @Test func `Deep nesting preserves full parent path`() throws {
         let proto = """
         message A {
         message B {
@@ -343,7 +343,7 @@ import Foundation
         #expect(status.fullName == "A.B.Status")
     }
 
-    @Test func keywordLikeFieldNames() throws {
+    @Test func `Keyword like field names`() throws {
         let proto = """
         message Config {
         string message_text = 1;

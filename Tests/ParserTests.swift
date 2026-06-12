@@ -3,7 +3,7 @@ import Foundation
 @testable import SwiftBuffet
 
 @Suite struct ParserTests {
-    @Test func parseSimpleMessage() throws {
+    @Test func `Parse simple message`() throws {
         let protoFileContent = """
         syntax = "proto3";
 
@@ -32,7 +32,7 @@ import Foundation
         #expect(nameField.isMap == false, "Expected field to be non-map")
     }
 
-    @Test func parseNestedMessage() throws {
+    @Test func `Parse nested message`() throws {
         let protoFileContent = """
         syntax = "proto3";
 
@@ -65,7 +65,7 @@ import Foundation
         #expect(addressMessage.fields.count == 3, "Expected 3 fields, but got \(addressMessage.fields.count)")
     }
 
-    @Test func parseNestedEnumAndWellKnownTypes() throws {
+    @Test func `Parse nested enum and well known types`() throws {
         let protoFileContent = """
             syntax = "proto3";
 
@@ -124,7 +124,7 @@ import Foundation
         #expect(createdAtField.isMap == false, "Expected field to be non-map")
     }
 
-    @Test func parseFieldModifiers() throws {
+    @Test func `Parse field modifiers`() throws {
         let protoFileContent = """
         syntax = "proto3";
 
@@ -158,7 +158,7 @@ import Foundation
         #expect(oldField.isDeprecated)
     }
 
-    @Test func parseAndGenerateExampleProto() throws {
+    @Test func `Parse and generate example proto`() throws {
         let protoFileContent = """
         syntax = "proto3";
 

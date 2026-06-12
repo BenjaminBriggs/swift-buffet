@@ -9,7 +9,7 @@ import Foundation
 /// gate across the corpus and flag matrix.
 @Suite struct RoundTripTests {
 
-    private let corpus: [String: String] = [
+    private static let corpus: [String: String] = [
         "empty message": "message Empty {}",
         "simple": """
         message Person {
@@ -80,26 +80,27 @@ import Foundation
         """,
     ]
 
-    @Test func generatedSwiftParsesCleanly() throws {
-        for (label, proto) in corpus {
-            let (messages, enums) = try parseProto(proto, swiftPrefix: "App")
-            for includeProto in [false, true] {
-                for backingData in [false, true] {
-                    do {
-                        _ = try generateSwiftCode(
-                            from: messages,
-                            enums: enums,
-                            with: "App",
-                            includeProto: includeProto,
-                            includeLocalIDFor: messages.map(\.name),
-                            includeBackingData: backingData,
-                            with: "Proto"
-                        )
-                    } catch {
-                        Issue.record("Corpus entry '\(label)' (includeProto: \(includeProto), backingData: \(backingData)) failed: \(error)")
-                    }
-                }
-            }
-        }
+    @Test(
+        arguments: corpus.keys,
+        [(includeProto: false, backingData: false),
+         (includeProto: false, backingData: true),
+         (includeProto: true, backingData: false),
+         (includeProto: true, backingData: true)]
+    )
+    func `Generated Swift parses cleanly`(
+        label: String,
+        flags: (includeProto: Bool, backingData: Bool)
+    ) throws {
+        let proto = Self.corpus[label]!
+        let (messages, enums) = try parseProto(proto, swiftPrefix: "App")
+        _ = try generateSwiftCode(
+            from: messages,
+            enums: enums,
+            with: "App",
+            includeProto: flags.includeProto,
+            includeLocalIDFor: messages.map(\.name),
+            includeBackingData: flags.backingData,
+            with: "Proto"
+        )
     }
 }

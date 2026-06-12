@@ -4,66 +4,59 @@ import Foundation
 
 @Suite struct ProtoParserErrorTests {
 
+    /// Asserts `source` fails to parse and returns the typed error for
+    /// inspection. `#expect(throws:)` records the failure itself if no
+    /// `ParseError` is thrown.
     private func parseError(_ source: String) -> ParseError? {
-        do {
-            _ = try ProtoParser.parse(source, verbose: false)
-            return nil
-        } catch let error as ParseError {
-            return error
-        } catch {
-            Issue.record("Expected ParseError, got \(error)")
-            return nil
+        #expect(throws: ParseError.self) {
+            try ProtoParser.parse(source, verbose: false)
         }
     }
 
-    @Test func missingSemicolonAfterField() {
+    @Test func `Missing semicolon after field`() {
         let proto = """
         message A {
         string x = 1
         }
         """
         let error = parseError(proto)
-        #expect(error != nil)
         #expect(error?.line == 3)
         #expect(error?.expected == "';'")
     }
 
-    @Test func missingBraceAfterMessageName() {
+    @Test func `Missing brace after message name`() {
         let proto = "message A string x = 1; }"
         let error = parseError(proto)
-        #expect(error != nil)
         #expect(error?.line == 1)
         #expect(error?.expected == "'{'")
     }
 
-    @Test func missingFieldNumber() {
+    @Test func `Missing field number`() {
         let proto = """
         message A {
         string x = ;
         }
         """
         let error = parseError(proto)
-        #expect(error != nil)
         #expect(error?.line == 2)
         #expect(error?.expected == "a field number")
     }
 
-    @Test func unexpectedEndOfFileInsideMessage() {
+    @Test func `Unexpected end of file inside message`() {
         let proto = """
         message A {
         string x = 1;
         """
         let error = parseError(proto)
-        #expect(error != nil)
         #expect(error?.found == "end of file")
     }
 
-    @Test func unknownTopLevelStatement() {
+    @Test func `Unknown top level statement`() {
         let proto = "rpc Foo (Bar) returns (Baz);"
-        #expect(parseError(proto) != nil)
+        _ = parseError(proto)
     }
 
-    @Test func oneofMembersAreParsedAsFields() throws {
+    @Test func `Oneof members are parsed as fields`() throws {
         let proto = """
         message A {
         string x = 1;
@@ -79,7 +72,7 @@ import Foundation
         #expect(file.messages[0].fields.map(\.name) == ["x", "a", "b", "y"])
     }
 
-    @Test func serviceIsSkippedWithoutError() throws {
+    @Test func `Service is skipped without error`() throws {
         let proto = """
         service Greeter {
         rpc SayHello (HelloRequest) returns (HelloReply);
@@ -93,7 +86,7 @@ import Foundation
         #expect(file.messages.map(\.name) == ["HelloRequest"])
     }
 
-    @Test func reservedIsSkippedSilently() throws {
+    @Test func `Reserved is skipped silently`() throws {
         let proto = """
         message A {
         reserved 2, 15;

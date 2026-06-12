@@ -30,7 +30,12 @@ import Foundation
         _ code: String,
         _ fragment: String,
         _ message: String = "",
-        sourceLocation: SourceLocation = #_sourceLocation
+        sourceLocation: SourceLocation = SourceLocation(
+            fileID: #fileID,
+            filePath: #filePath,
+            line: #line,
+            column: #column
+        )
     ) {
         func normalized(_ string: String) -> String {
             string.split(whereSeparator: \.isWhitespace).joined(separator: " ")
@@ -54,7 +59,7 @@ import Foundation
         )
     }
 
-    @Test func signedIntConversion() throws {
+    @Test func `Signed int conversion`() throws {
         let code = try generate(fields: [
             makeField(name: "age", type: "int32"),
             makeField(name: "score", type: "sint64")
@@ -66,7 +71,7 @@ import Foundation
         #expect(code.contains("Int(exactly:") == false, "Generated code should not force-unwrap int conversions")
     }
 
-    @Test func unsignedIntConversion() throws {
+    @Test func `Unsigned int conversion`() throws {
         let code = try generate(fields: [
             makeField(name: "counter", type: "uint64"),
             makeField(name: "flags", type: "fixed32")
@@ -78,7 +83,7 @@ import Foundation
         #expect(code.contains("Int(exactly:") == false)
     }
 
-    @Test func optionalFieldHasCheck() throws {
+    @Test func `Optional field has check`() throws {
         let code = try generate(fields: [
             makeField(name: "nick_name", type: "string", isOptional: true)
         ])
@@ -88,7 +93,7 @@ import Foundation
         assertContains(code, "self.nickName = nil")
     }
 
-    @Test func repeatedFields() throws {
+    @Test func `Repeated fields`() throws {
         let code = try generate(fields: [
             makeField(name: "scores", type: "int32", isRepeated: true),
             makeField(name: "addresses", type: "Address", isRepeated: true),
@@ -101,7 +106,7 @@ import Foundation
         assertContains(code, "self.imageURLs = proto.imageURLs.compactMap { URL(string: $0) }", "Repeated URL fields should convert via URL(string:)")
     }
 
-    @Test func mapField() throws {
+    @Test func `Map field`() throws {
         let code = try generate(fields: [
             makeField(name: "labels", type: "<string, string>", isMap: true)
         ])
@@ -110,7 +115,7 @@ import Foundation
         assertContains(code, "self.labels = proto.labels.reduce(into: [String: String]()) { result, element in result[element.key] = element.value }")
     }
 
-    @Test func uRLFields() throws {
+    @Test func `URL fields`() throws {
         let code = try generate(fields: [
             makeField(name: "home_url", type: "string"),
             makeField(name: "avatar_url", type: "string", isOptional: true)
@@ -123,7 +128,7 @@ import Foundation
         assertContains(code, "self.avatarURL = URL(string: proto.avatarURL)")
     }
 
-    @Test func descriptionFieldUsesProtoEscapedName() throws {
+    @Test func `Description field uses proto escaped name`() throws {
         let code = try generate(fields: [
             makeField(name: "description", type: "string"),
             makeField(name: "summary", type: "Summary")
@@ -134,7 +139,7 @@ import Foundation
         assertContains(code, "self.summary = summary", "The bound local, not the proto property name, should be assigned")
     }
 
-    @Test func wellKnownTypeFields() throws {
+    @Test func `Well known type fields`() throws {
         let code = try generate(fields: [
             makeField(name: "duration", type: "google.protobuf.Duration"),
             makeField(name: "created_at", type: "google.protobuf.Timestamp")
@@ -144,7 +149,7 @@ import Foundation
         assertContains(code, "self.createdAt = proto.createdAt.date")
     }
 
-    @Test func backingDataProperty() throws {
+    @Test func `Backing data property`() throws {
         let messages = [ProtoMessage(
             name: "Person",
             fields: [makeField(name: "name", type: "string")],

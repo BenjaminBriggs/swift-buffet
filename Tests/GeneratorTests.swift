@@ -3,7 +3,7 @@ import Foundation
 @testable import SwiftBuffet
 
 @Suite struct GeneratorTests {
-    @Test func generateSimpleMessage() throws {
+    @Test func `Generate simple message`() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -66,7 +66,7 @@ import Foundation
         #expect(generatedCode.contains("public let _localID = UUID()"), "The generated code should a `localID` property")
     }
 
-    @Test func generateNestedMessage() throws {
+    @Test func `Generate nested message`() throws {
         let addressProtoMessage = ProtoMessage(
             name: "Address",
             fields: [
@@ -167,7 +167,7 @@ import Foundation
         #expect(generatedCode.contains("internal init?(proto: ProtoAddress)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoAddress'")
     }
 
-    @Test func generateNestedEnumAndWellKnownTypes() throws {
+    @Test func `Generate nested enum and well known types`() throws {
         let personProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -272,7 +272,7 @@ import Foundation
         #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
     }
 
-    @Test func integerConversionUsesMatchingSwiftType() throws {
+    @Test func `Integer conversion uses matching swift type`() throws {
         let message = ProtoMessage(
             name: "Stats",
             fields: [
@@ -316,7 +316,7 @@ import Foundation
         #expect(generated.contains("self.rank = Int(proto.rank)"))
     }
 
-    @Test func messageTypeNameContainingIntIsNotTreatedAsInteger() throws {
+    @Test func `Message type name containing int is not treated as integer`() throws {
         let message = ProtoMessage(
             name: "Job",
             fields: [
@@ -348,7 +348,7 @@ import Foundation
         #expect(generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)"))
     }
 
-    @Test func nestedMessageProtoInitUsesFullProtoTypeName() throws {
+    @Test func `Nested message proto init uses full proto type name`() throws {
         let inner = ProtoMessage(
             name: "Inner",
             fields: [
@@ -381,7 +381,7 @@ import Foundation
         #expect(generated.contains("ProtoInner") == false)
     }
 
-    @Test func duplicateSwiftTypeNamesThrow() {
+    @Test func `Duplicate swift type names throw`() {
         let field = ProtoField(
             swiftPrefix: "App",
             name: "value",
@@ -412,7 +412,7 @@ import Foundation
         #expect(description.contains("Invoice.Item"))
     }
 
-    @Test func messageAndTopLevelEnumNameCollisionThrows() {
+    @Test func `Message and top level enum name collision throws`() {
         let nestedMessage = ProtoMessage(
             name: "Status",
             fields: [],
@@ -438,7 +438,7 @@ import Foundation
         #expect(String(describing: error).contains("AppStatus"))
     }
 
-    @Test func nestedEnumDoesNotCollideWithTopLevelType() throws {
+    @Test func `Nested enum does not collide with top level type`() throws {
         // A nested enum lives inside an extension of its parent, so it
         // occupies a different namespace than top-level types.
         let message = ProtoMessage(name: "Status", fields: [], parentPath: [])
@@ -460,7 +460,7 @@ import Foundation
         )
     }
 
-    @Test func localIDs() throws {
+    @Test func `Local IDs`() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
