@@ -20,9 +20,9 @@ import Foundation
     @Test func `Simple message field types`() throws {
         let proto = """
         message Person {
-        string name = 1;
-        int32 age = 2;
-        bool is_active = 3;
+            string name = 1;
+            int32 age = 2;
+            bool is_active = 3;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -39,16 +39,16 @@ import Foundation
     @Test func `Multiple top level declarations`() throws {
         let proto = """
         message A {
-        string x = 1;
+            string x = 1;
         }
 
         enum Color {
-        COLOR_UNSPECIFIED = 0;
-        COLOR_RED = 1;
+            COLOR_UNSPECIFIED = 0;
+            COLOR_RED = 1;
         }
 
         message B {
-        int32 y = 1;
+            int32 y = 1;
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
@@ -62,13 +62,13 @@ import Foundation
     @Test func `Nested message two levels`() throws {
         let proto = """
         message Outer {
-        string a = 1;
-        message Middle {
-        string b = 1;
-        message Inner {
-        string c = 1;
-        }
-        }
+            string a = 1;
+            message Middle {
+                string b = 1;
+                message Inner {
+                    string c = 1;
+                }
+           }
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -87,11 +87,11 @@ import Foundation
     @Test func `Nested enum in message`() throws {
         let proto = """
         message Person {
-        enum Gender {
-        GENDER_UNKNOWN = 0;
-        GENDER_MALE = 1;
-        }
-        Gender gender = 1;
+            enum Gender {
+                GENDER_UNKNOWN = 0;
+                GENDER_MALE = 1;
+            }
+            Gender gender = 1;
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
@@ -105,8 +105,8 @@ import Foundation
     @Test func `Optional and repeated fields`() throws {
         let proto = """
         message Bag {
-        optional string label = 1;
-        repeated int32 counts = 2;
+            optional string label = 1;
+            repeated int32 counts = 2;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -120,12 +120,12 @@ import Foundation
     @Test func `Map fields`() throws {
         let proto = """
         message Lookup {
-        map<string, int32> scores = 1;
-        map<string, Person> people = 2;
+            map<string, int32> scores = 1;
+            map<string, Person> people = 2;
         }
 
         message Person {
-        string name = 1;
+            string name = 1;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -139,8 +139,8 @@ import Foundation
     @Test func `Deprecated field option`() throws {
         let proto = """
         message Address {
-        string street = 1 [deprecated = true];
-        string city = 2;
+            string street = 1 [deprecated = true];
+            string city = 2;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -151,9 +151,9 @@ import Foundation
     @Test func `Doc comment on field`() throws {
         let proto = """
         message Person {
-        /** The person's legal name. */
-        string name = 1;
-        int32 age = 2;
+            /** The person's legal name. */
+            string name = 1;
+            int32 age = 2;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -167,9 +167,9 @@ import Foundation
     @Test func `Enum common prefix cases`() throws {
         let proto = """
         enum Gender {
-        GENDER_UNKNOWN = 0;
-        GENDER_MALE = 1;
-        GENDER_FEMALE = 2;
+            GENDER_UNKNOWN = 0;
+            GENDER_MALE = 1;
+            GENDER_FEMALE = 2;
         }
         """
         let (_, enums) = try parseProto(proto, swiftPrefix: "")
@@ -184,7 +184,10 @@ import Foundation
         let stripped = stripCommonPrefix(from: [
             ProtoEnumCase(name: "S_UNKNOWN", value: 0)
         ])
-        #expect(stripped.map(\.name) == ["sUnknown"], "A single case is its own common prefix and must not be stripped")
+        #expect(
+            stripped.map(\.name) == ["sUnknown"],
+            "A single case is its own common prefix and must not be stripped"
+        )
     }
 
     @Test func `Prefix equal to whole case name is not stripped`() throws {
@@ -192,7 +195,10 @@ import Foundation
             ProtoEnumCase(name: "GENDER", value: 0),
             ProtoEnumCase(name: "GENDER_MALE", value: 1)
         ])
-        #expect(stripped.map(\.name) == ["gender", "genderMale"], "Stripping must back off entirely when it would empty a name")
+        #expect(
+            stripped.map(\.name) == ["gender", "genderMale"],
+            "Stripping must back off entirely when it would empty a name"
+        )
     }
 
     @Test func `Header statements ignored`() throws {
@@ -203,7 +209,7 @@ import Foundation
         option java_package = "com.example";
 
         message Person {
-        google.protobuf.Timestamp created_at = 1;
+            google.protobuf.Timestamp created_at = 1;
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
@@ -241,17 +247,18 @@ import Foundation
         let proto = """
         /** File-level overview comment. */
         message Person {
-        /** first */
-        /** second comment wins */
-        string name = 1;
-        int32 age = 2;
-        /** dangling comment before close */
+            /** first */
+            /** second comment wins */
+            string name = 1;
+            int32 age = 2;
+            /** dangling comment before close */
         }
+        
         /** between declarations */
         enum Plan {
-        /** case comment */
-        PLAN_FREE = 0;
-        /** dangling in enum */
+            /** case comment */
+            PLAN_FREE = 0;
+            /** dangling in enum */
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
@@ -266,10 +273,10 @@ import Foundation
     @Test func `Custom parenthesized field options`() throws {
         let proto = """
         message User {
-        string email = 1 [(validate.rules).string.min_len = 1];
-        string name = 2 [(validate.rules).string = { min_len: 1, max_len: 64 }];
-        float ratio = 3 [some_option = 0.5];
-        string street = 4 [deprecated = true, (custom.opt) = "x"];
+            string email = 1 [(validate.rules).string.min_len = 1];
+            string name = 2 [(validate.rules).string = { min_len: 1, max_len: 64 }];
+            float ratio = 3 [some_option = 0.5];
+            string street = 4 [deprecated = true, (custom.opt) = "x"];
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -287,7 +294,7 @@ import Foundation
         option (my.angle_option) = < a: 1; b: 2 >;
 
         message Api {
-        string path = 1;
+            string path = 1;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -298,8 +305,8 @@ import Foundation
     @Test func `Dotted custom option ending in deprecated is not deprecated`() throws {
         let proto = """
         message M {
-        int32 a = 1 [(my.ext).deprecated = true];
-        int32 b = 2 [(custom.opt) = 5, deprecated = true];
+            int32 a = 1 [(my.ext).deprecated = true];
+            int32 b = 2 [(custom.opt) = 5, deprecated = true];
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -310,12 +317,12 @@ import Foundation
     @Test func `Oneof members become fields`() throws {
         let proto = """
         message Event {
-        string id = 1;
-        oneof payload {
-        string click = 2;
-        int32 view = 3;
-        }
-        string source = 4;
+            string id = 1;
+            oneof payload {
+                string click = 2;
+                int32 view = 3;
+            }
+            string source = 4;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
@@ -326,12 +333,12 @@ import Foundation
     @Test func `Deep nesting preserves full parent path`() throws {
         let proto = """
         message A {
-        message B {
-        enum Status {
-        STATUS_UNSPECIFIED = 0;
-        }
-        Status status = 1;
-        }
+           message B {
+                enum Status {
+                    STATUS_UNSPECIFIED = 0;
+                }
+                Status status = 1;
+            }
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
@@ -346,8 +353,8 @@ import Foundation
     @Test func `Keyword like field names`() throws {
         let proto = """
         message Config {
-        string message_text = 1;
-        string option = 2;
+            string message_text = 1;
+            string option = 2;
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")

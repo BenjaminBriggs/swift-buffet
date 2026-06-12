@@ -9,37 +9,87 @@ import Foundation
     }
 
     @Test func punctuation() throws {
-        #expect(try kinds("{ } = ; < > , [ ] ( ) .") == [.openBrace, .closeBrace, .equals, .semicolon,
-             .openAngle, .closeAngle, .comma, .openBracket, .closeBracket,
-             .openParen, .closeParen, .dot,
-             .eof])
+        #expect(
+            try kinds("{ } = ; < > , [ ] ( ) .") == [
+                .openBrace,
+                .closeBrace,
+                .equals,
+                .semicolon,
+                .openAngle,
+                .closeAngle,
+                .comma,
+                .openBracket,
+                .closeBracket,
+                .openParen,
+                .closeParen,
+                .dot,
+                .eof
+            ]
+        )
     }
 
     @Test func `Identifiers and keywords are identifiers`() throws {
-        #expect(try kinds("message optional foo_bar Baz9") == [.identifier("message"), .identifier("optional"),
-             .identifier("foo_bar"), .identifier("Baz9"), .eof])
+        #expect(
+            try kinds("message optional foo_bar Baz9") == [
+                .identifier("message"),
+                .identifier("optional"),
+                .identifier("foo_bar"),
+                .identifier("Baz9"),
+                .eof
+            ]
+        )
     }
 
     @Test func `Int literals`() throws {
-        #expect(try kinds("0 42 -7") == [.intLiteral(0), .intLiteral(42), .intLiteral(-7), .eof])
+        #expect(
+            try kinds("0 42 -7") == [
+                .intLiteral(0),
+                .intLiteral(42),
+                .intLiteral(-7),
+                .eof
+            ]
+        )
     }
 
     @Test func `String literal`() throws {
-        #expect(try kinds(#"import "google/protobuf/duration.proto";"#) == [.identifier("import"),
-             .stringLiteral("google/protobuf/duration.proto"),
-             .semicolon, .eof])
+        #expect(
+            try kinds(#"import "google/protobuf/duration.proto";"#) == [
+                .identifier("import"),
+                .stringLiteral("google/protobuf/duration.proto"),
+                .semicolon,
+                .eof
+            ]
+        )
     }
 
     @Test func `Doc comment captured verbatim`() throws {
-        #expect(try kinds("/** hi there */ string") == [.docComment("/** hi there */"), .identifier("string"), .eof])
+        #expect(
+            try kinds("/** hi there */ string") == [
+                .docComment("/** hi there */"),
+                .identifier("string"),
+                .eof
+            ]
+        )
     }
 
     @Test func `Line comments skipped`() throws {
-        #expect(try kinds("foo // comment text ; { }\nbar") == [.identifier("foo"), .identifier("bar"), .eof])
+        #expect(
+            try kinds("foo // comment text ; { }\nbar") == [
+                .identifier("foo"),
+                .identifier("bar"),
+                .eof
+            ]
+        )
     }
 
     @Test func `Plain block comments skipped`() throws {
-        #expect(try kinds("foo /* not a doc comment */ bar") == [.identifier("foo"), .identifier("bar"), .eof])
+        #expect(
+            try kinds("foo /* not a doc comment */ bar") == [
+                .identifier("foo"),
+                .identifier("bar"),
+                .eof
+            ]
+        )
     }
 
     @Test func positions() throws {
@@ -71,12 +121,22 @@ import Foundation
     }
 
     @Test func `Unknown characters become tokens`() throws {
-        #expect(try kinds("get: \"/v1\"") == [.identifier("get"), .unknown(":"), .stringLiteral("/v1"), .eof])
+        #expect(
+            try kinds("get: \"/v1\"") == [
+                .identifier("get"),
+                .unknown(":"),
+                .stringLiteral("/v1"),
+                .eof
+            ]
+        )
     }
 
     @Test func `Unknown character in parsed position throws`() {
         let error = #expect(throws: ParseError.self) {
-            try ProtoParser.parse("message § {}", verbose: false)
+            try ProtoParser.parse(
+                "message § {}",
+                verbose: false
+            )
         }
         #expect(error?.column == 9)
     }

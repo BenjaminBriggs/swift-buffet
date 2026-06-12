@@ -54,16 +54,46 @@ import Foundation
             with: "Proto"
         )
 
-        #expect(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
-        #expect(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
-        #expect(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
-        #expect(generatedCode.contains("public let isActive: Bool"), "The generated code should contain the 'isActive' property")
-        #expect(generatedCode.contains("public init("), "The generated code should contain the 'init' method")
-        #expect(generatedCode.contains("self.name = name"), "The generated code should initialize the 'name' property")
-        #expect(generatedCode.contains("self.age = age"), "The generated code should initialize the 'age' property")
-        #expect(generatedCode.contains("self.isActive = isActive"), "The generated code should initialize the 'isActive' property")
-        #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
-        #expect(generatedCode.contains("public let _localID = UUID()"), "The generated code should a `localID` property")
+        #expect(
+            generatedCode.contains("public struct AppPerson"),
+            "The generated code should contain the 'AppPerson' struct"
+        )
+        #expect(
+            generatedCode.contains("public let name: String"),
+            "The generated code should contain the 'name' property"
+        )
+        #expect(
+            generatedCode.contains("public let age: Int"),
+            "The generated code should contain the 'age' property"
+        )
+        #expect(
+            generatedCode.contains("public let isActive: Bool"),
+            "The generated code should contain the 'isActive' property"
+        )
+        #expect(
+            generatedCode.contains("public init("),
+            "The generated code should contain the 'init' method"
+        )
+        #expect(
+            generatedCode.contains("self.name = name"),
+            "The generated code should initialize the 'name' property"
+        )
+        #expect(
+            generatedCode.contains("self.age = age"),
+            "The generated code should initialize the 'age' property"
+        )
+        #expect(
+            generatedCode.contains("self.isActive = isActive"),
+            "The generated code should initialize the 'isActive' property"
+        )
+        #expect(
+            generatedCode.contains("internal init?(proto: ProtoPerson)"),
+            "The generated code should contain the 'init?(proto:)' method"
+        )
+        #expect(
+            generatedCode.contains("public let _localID = UUID()"),
+            "The generated code should a `localID` property"
+        )
     }
 
     @Test func `Generate nested message`() throws {
@@ -154,17 +184,50 @@ import Foundation
             with: "Proto"
         )
 
-        #expect(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
-        #expect(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
-        #expect(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
-        #expect(generatedCode.contains("public let address: AppAddress"), "The generated code should contain the 'address' property")
-        #expect(generatedCode.contains("public struct AppAddress"), "The generated code should contain the 'AppAddress' struct")
-        #expect(generatedCode.contains("public let street: String"), "The generated code should contain the 'street' property")
-        #expect(generatedCode.contains("public let city: String"), "The generated code should contain the 'city' property")
-        #expect(generatedCode.contains("public let state: String"), "The generated code should contain the 'state' property")
-        #expect(generatedCode.contains("public init("), "The generated code should contain the 'init' method")
-        #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoPerson'")
-        #expect(generatedCode.contains("internal init?(proto: ProtoAddress)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoAddress'")
+        #expect(
+            generatedCode.contains("public struct AppPerson"),
+            "The generated code should contain the 'AppPerson' struct"
+        )
+        #expect(
+            generatedCode.contains("public let name: String"),
+            "The generated code should contain the 'name' property"
+        )
+        #expect(
+            generatedCode.contains("public let age: Int"),
+            "The generated code should contain the 'age' property"
+        )
+        #expect(
+            generatedCode.contains("public let address: AppAddress"),
+            "The generated code should contain the 'address' property"
+        )
+        #expect(
+            generatedCode.contains("public struct AppAddress"),
+            "The generated code should contain the 'AppAddress' struct"
+        )
+        #expect(
+            generatedCode.contains("public let street: String"),
+            "The generated code should contain the 'street' property"
+        )
+        #expect(
+            generatedCode.contains("public let city: String"),
+            "The generated code should contain the 'city' property"
+        )
+        #expect(
+            generatedCode.contains("public let state: String"),
+            "The generated code should contain the 'state' property"
+        )
+        #expect(
+            generatedCode.contains("public init("),
+            "The generated code should contain the 'init' method"
+        )
+        #expect(
+            generatedCode.contains("internal init?(proto: ProtoPerson)"),
+            "The generated code should contain the 'init?(proto:)' method for 'ProtoPerson'"
+        )
+        #expect(
+            generatedCode.contains("internal init?(proto: ProtoAddress)"),
+            "The generated code should contain the 'init?(proto:)' method for 'ProtoAddress'"
+        )
     }
 
     @Test func `Generate nested enum and well known types`() throws {
@@ -258,18 +321,54 @@ import Foundation
             with: "Proto"
         )
 
-        #expect(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
-        #expect(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
-        #expect(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
-        #expect(generatedCode.contains("public let isActive: Bool"), "The generated code should contain the 'isActive' property")
-        #expect(generatedCode.contains("public enum AppGender: Int"), "The generated code should contain the 'Gender' enum")
-        #expect(generatedCode.contains("case unknown = 0"), "The 'Gender' enum should contain the 'unknown' case")
-        #expect(generatedCode.contains("case male = 1"), "The 'Gender' enum should contain the 'male' case")
-        #expect(generatedCode.contains("case female = 2"), "The 'Gender' enum should contain the 'female' case")
-        #expect(generatedCode.contains("public let gender: AppGender"), "The generated code should contain the 'gender' property")
-        #expect(generatedCode.contains("public let lastActive: TimeInterval"), "The generated code should contain the 'lastActive' property")
-        #expect(generatedCode.contains("public let createdAt: Date"), "The generated code should contain the 'createdAt' property")
-        #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
+        #expect(
+            generatedCode.contains("public struct AppPerson"),
+            "The generated code should contain the 'AppPerson' struct"
+        )
+        #expect(
+            generatedCode.contains("public let name: String"),
+            "The generated code should contain the 'name' property"
+        )
+        #expect(
+            generatedCode.contains("public let age: Int"),
+            "The generated code should contain the 'age' property"
+        )
+        #expect(
+            generatedCode.contains("public let isActive: Bool"),
+            "The generated code should contain the 'isActive' property"
+        )
+        #expect(
+            generatedCode.contains("public enum AppGender: Int"),
+            "The generated code should contain the 'Gender' enum"
+        )
+        #expect(
+            generatedCode.contains("case unknown = 0"),
+            "The 'Gender' enum should contain the 'unknown' case"
+        )
+        #expect(
+            generatedCode.contains("case male = 1"),
+            "The 'Gender' enum should contain the 'male' case"
+        )
+        #expect(
+            generatedCode.contains("case female = 2"),
+            "The 'Gender' enum should contain the 'female' case"
+        )
+        #expect(
+            generatedCode.contains("public let gender: AppGender"),
+            "The generated code should contain the 'gender' property"
+        )
+        #expect(
+            generatedCode.contains("public let lastActive: TimeInterval"),
+            "The generated code should contain the 'lastActive' property"
+        )
+        #expect(
+            generatedCode.contains("public let createdAt: Date"),
+            "The generated code should contain the 'createdAt' property"
+        )
+        #expect(
+            generatedCode.contains("internal init?(proto: ProtoPerson)"),
+            "The generated code should contain the 'init?(proto:)' method"
+        )
     }
 
     @Test func `Integer conversion uses matching swift type`() throws {
@@ -310,10 +409,20 @@ import Foundation
             with: "Proto"
         )
 
-        #expect(generated.contains("!") == false, "Integer conversion must not force-unwrap")
-        #expect(generated.contains("Int(exactly:") == false)
-        #expect(generated.contains("self.viewCount = UInt(proto.viewCount)"), "uint64 must convert via its own Swift type, not Int")
-        #expect(generated.contains("self.rank = Int(proto.rank)"))
+        #expect(
+            generated.contains("!") == false,
+            "Integer conversion must not force-unwrap"
+        )
+        #expect(
+            generated.contains("Int(exactly:") == false
+        )
+        #expect(
+            generated.contains("self.viewCount = UInt(proto.viewCount)"),
+            "uint64 must convert via its own Swift type, not Int"
+        )
+        #expect(
+            generated.contains("self.rank = Int(proto.rank)")
+        )
     }
 
     @Test func `Message type name containing int is not treated as integer`() throws {
@@ -344,8 +453,13 @@ import Foundation
             with: "Proto"
         )
 
-        #expect(generated.contains("Int(exactly:") == false, "A message type whose name contains 'int' must not take the integer branch")
-        #expect(generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)"))
+        #expect(
+            generated.contains("Int(exactly:") == false,
+            "A message type whose name contains 'int' must not take the integer branch"
+        )
+        #expect(
+            generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)")
+        )
     }
 
     @Test func `Nested message proto init uses full proto type name`() throws {
@@ -376,9 +490,16 @@ import Foundation
             with: "Proto"
         )
 
-        #expect(generated.contains("internal init?(proto: ProtoOuter.Middle.Inner)"), "Nested messages must reference the fully-qualified SwiftProtobuf type")
-        #expect(generated.contains("try? ProtoOuter.Middle.Inner(serializedBytes: data)"))
-        #expect(generated.contains("ProtoInner") == false)
+        #expect(
+            generated.contains("internal init?(proto: ProtoOuter.Middle.Inner)"),
+            "Nested messages must reference the fully-qualified SwiftProtobuf type"
+        )
+        #expect(
+            generated.contains("try? ProtoOuter.Middle.Inner(serializedBytes: data)")
+        )
+        #expect(
+            generated.contains("ProtoInner") == false
+        )
     }
 
     @Test func `Duplicate swift type names throw`() {
@@ -406,6 +527,7 @@ import Foundation
                 with: "Proto"
             )
         }
+        
         let description = String(describing: error)
         #expect(description.contains("AppItem"))
         #expect(description.contains("Order.Item"))
@@ -509,11 +631,19 @@ import Foundation
             with: "Proto"
         )
 
-        func containsExactlyOneInstance(of substring: String, in string: String) -> Bool {
+        func containsExactlyOneInstance(
+            of substring: String,
+            in string: String
+        ) -> Bool {
             let components = string.components(separatedBy: substring)
             return components.count == 2
         }
 
-        #expect(containsExactlyOneInstance(of: "public let _localID = UUID()", in: generatedCode))
+        #expect(
+            containsExactlyOneInstance(
+                of: "public let _localID = UUID()",
+                in: generatedCode
+            )
+        )
     }
 }
