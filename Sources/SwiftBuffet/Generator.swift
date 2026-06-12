@@ -367,8 +367,12 @@ private func enumDecl(
         protoEnum.cases.map(\.value)
     )
 
-    var members: [DeclSyntax] = pairs.map { caseName, caseValue in
-        DeclSyntax("case \(raw: caseName) = \(raw: String(caseValue))")
+    // allow_alias permits several proto cases with one value; a Swift enum
+    // permits one case per raw value, so only the first name survives.
+    var seenValues = Set<Int>()
+    var members: [DeclSyntax] = pairs.compactMap { caseName, caseValue in
+        guard seenValues.insert(caseValue).inserted else { return nil }
+        return DeclSyntax("case \(raw: caseName) = \(raw: String(caseValue))")
     }
 
     if includeProto {

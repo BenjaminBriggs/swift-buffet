@@ -33,7 +33,7 @@ struct ProtoParser {
         var file = ProtoFileNode()
         loop: while true {
             switch peek().kind {
-            case .docComment:
+            case .docComment, .semicolon: // empty statements are legal
                 advance()
             case .identifier(let keyword):
                 switch keyword {
@@ -66,6 +66,14 @@ struct ProtoParser {
             let comment = takeDocComments()
             if peek().kind == .closeBrace {
                 break // dangling comment before the closing brace
+            }
+            if peek().kind == .semicolon { // empty statements are legal
+                advance()
+                continue
+            }
+            if peek().kind == .dot { // leading-dot absolute type reference
+                node.fields.append(try parseField(comment: comment))
+                continue
             }
 
             guard case .identifier(let word) = peek().kind else {
@@ -100,6 +108,10 @@ struct ProtoParser {
             let comment = takeDocComments()
             if peek().kind == .closeBrace {
                 break
+            }
+            if peek().kind == .semicolon { // empty statements are legal
+                advance()
+                continue
             }
             if case .identifier("option") = peek().kind {
                 try skipToSemicolon()
@@ -207,6 +219,10 @@ struct ProtoParser {
             if peek().kind == .closeBrace {
                 break // dangling comment before the closing brace
             }
+            if peek().kind == .semicolon { // empty statements are legal
+                advance()
+                continue
+            }
 
             guard case .identifier(let word) = peek().kind else {
                 throw unexpected(expected: "an enum case or '}'")
@@ -232,7 +248,12 @@ struct ProtoParser {
     }
 
     /// Parses a possibly dotted type name like `google.protobuf.Timestamp`.
+    /// A leading dot (absolute reference, `.foo.Bar`) is legal and normalized
+    /// away — it names the same type.
     private mutating func parseTypeName() throws -> String {
+        if peek().kind == .dot {
+            advance()
+        }
         var parts = [try expectIdentifier(description: "a type name")]
         while peek().kind == .dot {
             advance()

@@ -108,8 +108,8 @@ struct Lexer {
             case "(": appendAndAdvance(.openParen)
             case ")": appendAndAdvance(.closeParen)
             case ".": appendAndAdvance(.dot)
-            case "\"":
-                try lexStringLiteral()
+            case "\"", "'":
+                try lexStringLiteral(delimiter: character)
             case "/":
                 try lexComment()
             case "-":
@@ -144,38 +144,60 @@ struct Lexer {
         )
     }
 
+    /// Lexes an integer literal. Proto allows decimal, hex (`0x1F`), and
+    /// octal (`017`) forms.
     private mutating func lexNumber() throws {
         let startLine = line
         let startColumn = column
-        var text = ""
+        var negative = false
         if peek() == "-" {
-            text.append("-")
+            negative = true
             advance()
         }
-        while let character = peek(), character.isNumber {
-            text.append(character)
+
+        var digits = ""
+        var radix = 10
+        if peek() == "0" && (peek(ahead: 1) == "x" || peek(ahead: 1) == "X") {
+            radix = 16
             advance()
+            advance()
+            while let character = peek(), character.isHexDigit {
+                digits.append(character)
+                advance()
+            }
+        } else {
+            while let character = peek(), character.isNumber {
+                digits.append(character)
+                advance()
+            }
+            if digits.count > 1 && digits.hasPrefix("0") {
+                radix = 8
+            }
         }
-        guard let value = Int(text) else {
+
+        guard let magnitude = Int(digits, radix: radix) else {
             throw ParseError(
                 line: startLine,
                 column: startColumn,
                 expected: "an integer literal",
-                found: text
+                found: digits.isEmpty ? "-" : digits
             )
         }
+        let value = negative ? -magnitude : magnitude
         tokens.append(
             Token(kind: .intLiteral(value), line: startLine, column: startColumn)
         )
     }
 
-    private mutating func lexStringLiteral() throws {
+    /// Lexes a string literal. Proto allows both `"` and `'` delimiters and
+    /// C-style escape sequences.
+    private mutating func lexStringLiteral(delimiter: Character) throws {
         let startLine = line
         let startColumn = column
         advance() // opening quote
         var text = ""
         while let character = peek() {
-            if character == "\"" {
+            if character == delimiter {
                 advance()
                 tokens.append(
                     Token(
@@ -186,13 +208,24 @@ struct Lexer {
                 )
                 return
             }
+            if character == "\\", let escaped = peek(ahead: 1) {
+                switch escaped {
+                case "n": text.append("\n")
+                case "t": text.append("\t")
+                case "r": text.append("\r")
+                default: text.append(escaped)
+                }
+                advance()
+                advance()
+                continue
+            }
             text.append(character)
             advance()
         }
         throw ParseError(
             line: startLine,
             column: startColumn,
-            expected: "a closing '\"'",
+            expected: "a closing '\(delimiter)'",
             found: "end of file"
         )
     }
