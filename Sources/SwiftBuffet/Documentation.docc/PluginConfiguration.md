@@ -9,7 +9,7 @@ The build plugin runs the generator with default options. To customize it, place
     "includeProtobuf": true,
     "protoPrefix": "Proto",
     "storeBackingData": false,
-    "localIDMessages": ["Person"],
+    "localIDMessages": ["FingerSandwich"],
     "quiet": true
 }
 ```
@@ -32,7 +32,7 @@ SwiftPM warns about unhandled files in a target directory. Add the config to the
     name: "YourTarget",
     exclude: ["swiftbuffet.json"],
     resources: [
-        .process("models.proto")
+        .process("buffet.proto")
     ],
     plugins: [
         .plugin(name: "SwiftBuffetPlugin", package: "SwiftBuffet")

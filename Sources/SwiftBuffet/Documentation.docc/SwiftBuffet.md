@@ -10,23 +10,23 @@ The tool runs in two ways:
 
 Internally, Swift Buffet lexes and parses proto source with a hand-written recursive-descent parser (no regular expressions), then generates Swift using SwiftSyntax — every generated file is re-parsed before it is written, so the tool fails loudly rather than emitting invalid Swift into your build.
 ```proto
-message Person {
-    string name = 1;
-    int32 id = 2;
-    optional string nick_name = 3;
+message FingerSandwich {
+    string filling = 1;
+    string bread = 2;
+    optional int32 quarters = 3;
 }
 ```
 becomes:
 ```swift
-public struct Person: Hashable, Equatable, Sendable {
-    public let name: String
-    public let id: Int
-    public let nickName: String?
+public struct FingerSandwich: Hashable, Equatable, Sendable {
+    public let filling: String
+    public let bread: String
+    public let quarters: Int?
 
-    public init(name: String, id: Int, nickName: String?) {
-        self.name = name
-        self.id = id
-        self.nickName = nickName
+    public init(filling: String, bread: String, quarters: Int?) {
+        self.filling = filling
+        self.bread = bread
+        self.quarters = quarters
     }
 }
 ```

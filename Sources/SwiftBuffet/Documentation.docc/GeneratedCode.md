@@ -30,20 +30,20 @@ Each message becomes a top-level `public struct` conforming to `Hashable`, `Equa
 With `--include-protobuf`, two more initializers are generated:
 ```swift
 public init?(data: Data) {
-    if let proto = try? ProtoPerson(serializedBytes: data) {
+    if let proto = try? ProtoFingerSandwich(serializedBytes: data) {
         self.init(proto: proto)
     } else {
         return nil
     }
 }
 
-internal init?(proto: ProtoPerson) {
-    self.name = proto.name
-    self.id = Int(proto.id)
-    if proto.hasNickName {
-        self.nickName = proto.nickName
+internal init?(proto: ProtoFingerSandwich) {
+    self.filling = proto.filling
+    self.bread = proto.bread
+    if proto.hasQuarters {
+        self.quarters = Int(proto.quarters)
     } else {
-        self.nickName = nil
+        self.quarters = nil
     }
 }
 ```
@@ -59,18 +59,20 @@ Conversion rules inside `init?(proto:)`:
 ## Enums
 Enums become `Int`-raw-value enums conforming to `CaseIterable`, `Hashable`, `Equatable`, and `Sendable`:
 ```proto
-enum Gender {
-    GENDER_UNKNOWN = 0;
-    GENDER_MALE = 1;
-    GENDER_FEMALE = 2;
+enum Filling {
+    FILLING_UNKNOWN = 0;
+    FILLING_CUCUMBER = 1;
+    FILLING_JAM = 2;
+    FILLING_SMOKED_SALMON = 3;
 }
 ```
 
 ```swift
-public enum AppGender: Int, CaseIterable, Hashable, Equatable, Sendable {
+public enum AppFilling: Int, CaseIterable, Hashable, Equatable, Sendable {
     case unknown = 0
-    case male = 1
-    case female = 2
+    case cucumber = 1
+    case jam = 2
+    case smokedSalmon = 3
 }
 ```
 - The shared `SCREAMING_SNAKE` prefix is stripped, but only at an underscore boundary, never for single-case enums, and never when stripping would leave an empty or digit-leading name (those cases keep their full name: `VERSION_1` → `version1`).
@@ -78,9 +80,9 @@ public enum AppGender: Int, CaseIterable, Hashable, Equatable, Sendable {
 - With `--include-protobuf`, enums gain `init?(proto:)` bridging by raw value.
 
 ## Nesting
-Generated structs are always emitted at the top level, regardless of proto nesting — a nested message `Outer.Inner` becomes `struct <prefix>Inner`. Nested **enums** are emitted inside an `extension` of their parent struct, so proto `Person.Gender` is Swift `AppPerson.AppGender`. Protobuf bridging always references the fully qualified SwiftProtobuf name (`ProtoOuter.Inner`).
+Generated structs are always emitted at the top level, regardless of proto nesting — a nested message `Outer.Inner` becomes `struct <prefix>Inner`. Nested **enums** are emitted inside an `extension` of their parent struct, so proto `Trifle.Layer` is Swift `AppTrifle.AppLayer`. Protobuf bridging always references the fully qualified SwiftProtobuf name (`ProtoOuter.Inner`).
 Because the Swift namespace is flattened, two messages with the same name under different parents would collide; generation fails with an error naming both types.
 
 ## Optional extras
-- `--local-id-messages Person` adds `public let _localID = UUID()` to `Person` — a stable identity for SwiftUI's `Identifiable`/`ForEach` even when the decoded content is equal.
+- `--local-id-messages FingerSandwich` adds `public let _localID = UUID()` to `FingerSandwich` — a stable identity for SwiftUI's `Identifiable`/`ForEach` even when the decoded content is equal.
 - `--store-backing-data` adds `public private(set) var _backingData: Data?`, populated with the original bytes by `init?(data:)` — useful for re-serializing or caching without a round trip.

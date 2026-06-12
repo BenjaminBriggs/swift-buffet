@@ -4,6 +4,32 @@
 
 Swift Buffet's goal is to generate simple Swift structs from Protocol Buffer (`.proto`) files. These simple types can then be used more easily with your existing swift code. This tool can be used both as a command-line tool and as a Swift Package Manager plugin.
 
+```proto
+message FingerSandwich {
+    string filling = 1;
+    string bread = 2;
+    optional int32 quarters = 3;
+}
+```
+
+becomes:
+
+```swift
+public struct FingerSandwich: Hashable, Equatable, Sendable {
+    public let filling: String
+    public let bread: String
+    public let quarters: Int?
+
+    public init(filling: String, bread: String, quarters: Int?) {
+        self.filling = filling
+        self.bread = bread
+        self.quarters = quarters
+    }
+}
+```
+
+Under the hood, proto files are parsed with a hand-written recursive-descent parser and the Swift output is built with SwiftSyntax — every generated file is re-parsed before it is written, so the tool fails with a clear error rather than putting invalid Swift into your build. Malformed proto input fails with a line and column number.
+
 ## Installation
 
 ### Swift Package Manager
@@ -25,7 +51,7 @@ targets: [
     .target(
         name: "YourTarget",
         resources: [
-            .process("yourFile.proto")
+            .process("buffet.proto")
         ],
         plugins: [
             .plugin(name: "SwiftBuffetPlugin", package: "SwiftBuffet")
@@ -44,7 +70,7 @@ The plugin can be configured by placing a `swiftbuffet.json` file in the target'
     "includeProtobuf": true,
     "protoPrefix": "Proto",
     "storeBackingData": false,
-    "localIDMessages": ["Person"],
+    "localIDMessages": ["FingerSandwich"],
     "quiet": true
 }
 ```
@@ -58,6 +84,10 @@ Each field maps to the equivalent command-line option below. Without a config fi
     ...
 )
 ```
+
+#### Xcode Projects
+
+The plugin also works in Xcode app projects, not just packages. Add the package to the project, attach **SwiftBuffetPlugin** under the target's *Build Phases → Run Build Tool Plug-ins*, and add your `.proto` files to the target. For Xcode projects, `swiftbuffet.json` is looked up in the project directory.
 
 ## Usage
 
@@ -84,7 +114,7 @@ In addition to the basic input and output paths, Swift Buffet provides several o
   This will prefix all generated types with `MyPrefix`.
 
   ```swift
-  public struct MyPrefixPerson: Hashable, Equatable, Sendable {
+  public struct MyPrefixFingerSandwich: Hashable, Equatable, Sendable {
     ...
   }
   ```
@@ -97,9 +127,9 @@ In addition to the basic input and output paths, Swift Buffet provides several o
 
   This can be useful when you need to interoperate between raw protobuf objects and the generated Swift structs.
   ```swift
-  public struct Person: Hashable, Equatable, Sendable {
+  public struct FingerSandwich: Hashable, Equatable, Sendable {
     ...
-    internal init?(proto: ProtoPerson) {
+    internal init?(proto: ProtoFingerSandwich) {
       ...
     }
     public init?(data: Data) {
@@ -123,7 +153,7 @@ In addition to the basic input and output paths, Swift Buffet provides several o
   ```
   This gives you a property that will store the data used to initialise the struct.
   ```swift
-  public struct Person: Hashable, Equatable, Sendable {
+  public struct FingerSandwich: Hashable, Equatable, Sendable {
     ...
     public private(set) var _backingData: Data?
     ...
@@ -137,11 +167,11 @@ In addition to the basic input and output paths, Swift Buffet provides several o
 - `--local-id-messages`: This option allows the user to specify which, if any, messages should include local IDs in their generated Swift objects. This can be particularly helpful in SwiftUI-based apps. 
 
   ```bash
-  swift run SwiftBuffet path/to/your/file.proto path/to/your/output.swift --local-id-messages Person --local-id-messages Dog
+  swift run SwiftBuffet path/to/your/file.proto path/to/your/output.swift --local-id-messages FingerSandwich --local-id-messages VolAuVent
   ```
 
   ```swift
-  public struct Person: Hashable, Equatable, Sendable {
+  public struct FingerSandwich: Hashable, Equatable, Sendable {
     ...
     public let _localID = UUID()
     ...
@@ -158,7 +188,7 @@ You can control the verbosity of the output using the following flags:
   swift run SwiftBuffet path/to/your/file.proto path/to/your/output.swift --verbose
   ```
 
-- `-q` / `--quiet`: Suppress most logging output. Only critical messages will be shown.
+- `-q` / `--quiet`: Suppress progress output. Errors are still reported.
 
   ```bash
   swift run SwiftBuffet path/to/your/file.proto path/to/your/output.swift --quiet
@@ -171,6 +201,12 @@ For example, to generate Swift code from `myFile.proto`, with a Swift object pre
 ```bash
 swift run SwiftBuffet myFile.proto MyAppModels.swift --swift-prefix MyApp --include-protobuf
 ```
+
+---
+
+## Documentation
+
+Full documentation ships as a DocC catalog: open the package in Xcode and choose **Product → Build Documentation**. It includes a getting-started guide, the complete command-line and plugin-configuration reference, a tour of the generated code (type mappings, naming rules, and the SwiftProtobuf bridging initializers), and the supported proto feature matrix.
 
 ---
 
