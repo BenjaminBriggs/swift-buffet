@@ -1,8 +1,9 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
-final class GeneratorTests: XCTestCase {
-    func testGenerateSimpleMessage() throws {
+@Suite struct GeneratorTests {
+    @Test func generateSimpleMessage() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -53,19 +54,19 @@ final class GeneratorTests: XCTestCase {
             with: "Proto"
         )
 
-        XCTAssertTrue(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
-        XCTAssertTrue(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
-        XCTAssertTrue(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
-        XCTAssertTrue(generatedCode.contains("public let isActive: Bool"), "The generated code should contain the 'isActive' property")
-        XCTAssertTrue(generatedCode.contains("public init("), "The generated code should contain the 'init' method")
-        XCTAssertTrue(generatedCode.contains("self.name = name"), "The generated code should initialize the 'name' property")
-        XCTAssertTrue(generatedCode.contains("self.age = age"), "The generated code should initialize the 'age' property")
-        XCTAssertTrue(generatedCode.contains("self.isActive = isActive"), "The generated code should initialize the 'isActive' property")
-        XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
-        XCTAssertTrue(generatedCode.contains("public let _localID = UUID()"), "The generated code should a `localID` property")
+        #expect(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
+        #expect(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
+        #expect(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
+        #expect(generatedCode.contains("public let isActive: Bool"), "The generated code should contain the 'isActive' property")
+        #expect(generatedCode.contains("public init("), "The generated code should contain the 'init' method")
+        #expect(generatedCode.contains("self.name = name"), "The generated code should initialize the 'name' property")
+        #expect(generatedCode.contains("self.age = age"), "The generated code should initialize the 'age' property")
+        #expect(generatedCode.contains("self.isActive = isActive"), "The generated code should initialize the 'isActive' property")
+        #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
+        #expect(generatedCode.contains("public let _localID = UUID()"), "The generated code should a `localID` property")
     }
 
-    func testGenerateNestedMessage() throws {
+    @Test func generateNestedMessage() throws {
         let addressProtoMessage = ProtoMessage(
             name: "Address",
             fields: [
@@ -153,20 +154,20 @@ final class GeneratorTests: XCTestCase {
             with: "Proto"
         )
 
-        XCTAssertTrue(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
-        XCTAssertTrue(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
-        XCTAssertTrue(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
-        XCTAssertTrue(generatedCode.contains("public let address: AppAddress"), "The generated code should contain the 'address' property")
-        XCTAssertTrue(generatedCode.contains("public struct AppAddress"), "The generated code should contain the 'AppAddress' struct")
-        XCTAssertTrue(generatedCode.contains("public let street: String"), "The generated code should contain the 'street' property")
-        XCTAssertTrue(generatedCode.contains("public let city: String"), "The generated code should contain the 'city' property")
-        XCTAssertTrue(generatedCode.contains("public let state: String"), "The generated code should contain the 'state' property")
-        XCTAssertTrue(generatedCode.contains("public init("), "The generated code should contain the 'init' method")
-        XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoPerson'")
-        XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoAddress)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoAddress'")
+        #expect(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
+        #expect(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
+        #expect(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
+        #expect(generatedCode.contains("public let address: AppAddress"), "The generated code should contain the 'address' property")
+        #expect(generatedCode.contains("public struct AppAddress"), "The generated code should contain the 'AppAddress' struct")
+        #expect(generatedCode.contains("public let street: String"), "The generated code should contain the 'street' property")
+        #expect(generatedCode.contains("public let city: String"), "The generated code should contain the 'city' property")
+        #expect(generatedCode.contains("public let state: String"), "The generated code should contain the 'state' property")
+        #expect(generatedCode.contains("public init("), "The generated code should contain the 'init' method")
+        #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoPerson'")
+        #expect(generatedCode.contains("internal init?(proto: ProtoAddress)"), "The generated code should contain the 'init?(proto:)' method for 'ProtoAddress'")
     }
 
-    func testGenerateNestedEnumAndWellKnownTypes() throws {
+    @Test func generateNestedEnumAndWellKnownTypes() throws {
         let personProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -257,21 +258,21 @@ final class GeneratorTests: XCTestCase {
             with: "Proto"
         )
 
-        XCTAssertTrue(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
-        XCTAssertTrue(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
-        XCTAssertTrue(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
-        XCTAssertTrue(generatedCode.contains("public let isActive: Bool"), "The generated code should contain the 'isActive' property")
-        XCTAssertTrue(generatedCode.contains("public enum AppGender: Int"), "The generated code should contain the 'Gender' enum")
-        XCTAssertTrue(generatedCode.contains("case unknown = 0"), "The 'Gender' enum should contain the 'unknown' case")
-        XCTAssertTrue(generatedCode.contains("case male = 1"), "The 'Gender' enum should contain the 'male' case")
-        XCTAssertTrue(generatedCode.contains("case female = 2"), "The 'Gender' enum should contain the 'female' case")
-        XCTAssertTrue(generatedCode.contains("public let gender: AppGender"), "The generated code should contain the 'gender' property")
-        XCTAssertTrue(generatedCode.contains("public let lastActive: TimeInterval"), "The generated code should contain the 'lastActive' property")
-        XCTAssertTrue(generatedCode.contains("public let createdAt: Date"), "The generated code should contain the 'createdAt' property")
-        XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
+        #expect(generatedCode.contains("public struct AppPerson"), "The generated code should contain the 'AppPerson' struct")
+        #expect(generatedCode.contains("public let name: String"), "The generated code should contain the 'name' property")
+        #expect(generatedCode.contains("public let age: Int"), "The generated code should contain the 'age' property")
+        #expect(generatedCode.contains("public let isActive: Bool"), "The generated code should contain the 'isActive' property")
+        #expect(generatedCode.contains("public enum AppGender: Int"), "The generated code should contain the 'Gender' enum")
+        #expect(generatedCode.contains("case unknown = 0"), "The 'Gender' enum should contain the 'unknown' case")
+        #expect(generatedCode.contains("case male = 1"), "The 'Gender' enum should contain the 'male' case")
+        #expect(generatedCode.contains("case female = 2"), "The 'Gender' enum should contain the 'female' case")
+        #expect(generatedCode.contains("public let gender: AppGender"), "The generated code should contain the 'gender' property")
+        #expect(generatedCode.contains("public let lastActive: TimeInterval"), "The generated code should contain the 'lastActive' property")
+        #expect(generatedCode.contains("public let createdAt: Date"), "The generated code should contain the 'createdAt' property")
+        #expect(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
     }
 
-    func testIntegerConversionUsesMatchingSwiftType() throws {
+    @Test func integerConversionUsesMatchingSwiftType() throws {
         let message = ProtoMessage(
             name: "Stats",
             fields: [
@@ -309,14 +310,13 @@ final class GeneratorTests: XCTestCase {
             with: "Proto"
         )
 
-        XCTAssertFalse(generated.contains("!"), "Integer conversion must not force-unwrap")
-        XCTAssertFalse(generated.contains("Int(exactly:"))
-        XCTAssertTrue(generated.contains("self.viewCount = UInt(proto.viewCount)"),
-                      "uint64 must convert via its own Swift type, not Int")
-        XCTAssertTrue(generated.contains("self.rank = Int(proto.rank)"))
+        #expect(generated.contains("!") == false, "Integer conversion must not force-unwrap")
+        #expect(generated.contains("Int(exactly:") == false)
+        #expect(generated.contains("self.viewCount = UInt(proto.viewCount)"), "uint64 must convert via its own Swift type, not Int")
+        #expect(generated.contains("self.rank = Int(proto.rank)"))
     }
 
-    func testMessageTypeNameContainingIntIsNotTreatedAsInteger() throws {
+    @Test func messageTypeNameContainingIntIsNotTreatedAsInteger() throws {
         let message = ProtoMessage(
             name: "Job",
             fields: [
@@ -344,12 +344,11 @@ final class GeneratorTests: XCTestCase {
             with: "Proto"
         )
 
-        XCTAssertFalse(generated.contains("Int(exactly:"),
-                       "A message type whose name contains 'int' must not take the integer branch")
-        XCTAssertTrue(generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)"))
+        #expect(generated.contains("Int(exactly:") == false, "A message type whose name contains 'int' must not take the integer branch")
+        #expect(generated.contains("if let printJob = AppPrintJob(proto: proto.printJob)"))
     }
 
-    func testNestedMessageProtoInitUsesFullProtoTypeName() throws {
+    @Test func nestedMessageProtoInitUsesFullProtoTypeName() throws {
         let inner = ProtoMessage(
             name: "Inner",
             fields: [
@@ -377,13 +376,12 @@ final class GeneratorTests: XCTestCase {
             with: "Proto"
         )
 
-        XCTAssertTrue(generated.contains("internal init?(proto: ProtoOuter.Middle.Inner)"),
-                      "Nested messages must reference the fully-qualified SwiftProtobuf type")
-        XCTAssertTrue(generated.contains("try? ProtoOuter.Middle.Inner(serializedBytes: data)"))
-        XCTAssertFalse(generated.contains("ProtoInner"))
+        #expect(generated.contains("internal init?(proto: ProtoOuter.Middle.Inner)"), "Nested messages must reference the fully-qualified SwiftProtobuf type")
+        #expect(generated.contains("try? ProtoOuter.Middle.Inner(serializedBytes: data)"))
+        #expect(generated.contains("ProtoInner") == false)
     }
 
-    func testDuplicateSwiftTypeNamesThrow() {
+    @Test func duplicateSwiftTypeNamesThrow() {
         let field = ProtoField(
             swiftPrefix: "App",
             name: "value",
@@ -397,7 +395,7 @@ final class GeneratorTests: XCTestCase {
         let first = ProtoMessage(name: "Item", fields: [field], parentPath: ["Order"])
         let second = ProtoMessage(name: "Item", fields: [field], parentPath: ["Invoice"])
 
-        XCTAssertThrowsError(
+        let error = #expect(throws: DuplicateTypeNameError.self) {
             try generateSwiftCode(
                 from: [first, second],
                 enums: [],
@@ -407,15 +405,14 @@ final class GeneratorTests: XCTestCase {
                 includeBackingData: false,
                 with: "Proto"
             )
-        ) { error in
-            let description = String(describing: error)
-            XCTAssertTrue(description.contains("AppItem"))
-            XCTAssertTrue(description.contains("Order.Item"))
-            XCTAssertTrue(description.contains("Invoice.Item"))
         }
+        let description = String(describing: error)
+        #expect(description.contains("AppItem"))
+        #expect(description.contains("Order.Item"))
+        #expect(description.contains("Invoice.Item"))
     }
 
-    func testMessageAndTopLevelEnumNameCollisionThrows() {
+    @Test func messageAndTopLevelEnumNameCollisionThrows() {
         let nestedMessage = ProtoMessage(
             name: "Status",
             fields: [],
@@ -427,7 +424,7 @@ final class GeneratorTests: XCTestCase {
             parentPath: []
         )
 
-        XCTAssertThrowsError(
+        let error = #expect(throws: DuplicateTypeNameError.self) {
             try generateSwiftCode(
                 from: [nestedMessage],
                 enums: [topLevelEnum],
@@ -437,12 +434,11 @@ final class GeneratorTests: XCTestCase {
                 includeBackingData: false,
                 with: "Proto"
             )
-        ) { error in
-            XCTAssertTrue(String(describing: error).contains("AppStatus"))
         }
+        #expect(String(describing: error).contains("AppStatus"))
     }
 
-    func testNestedEnumDoesNotCollideWithTopLevelType() throws {
+    @Test func nestedEnumDoesNotCollideWithTopLevelType() throws {
         // A nested enum lives inside an extension of its parent, so it
         // occupies a different namespace than top-level types.
         let message = ProtoMessage(name: "Status", fields: [], parentPath: [])
@@ -453,20 +449,18 @@ final class GeneratorTests: XCTestCase {
         )
         let parent = ProtoMessage(name: "Person", fields: [], parentPath: [])
 
-        XCTAssertNoThrow(
-            try generateSwiftCode(
-                from: [message, parent],
-                enums: [nestedEnum],
-                with: "App",
-                includeProto: false,
-                includeLocalIDFor: nil,
-                includeBackingData: false,
-                with: "Proto"
-            )
+        _ = try generateSwiftCode(
+            from: [message, parent],
+            enums: [nestedEnum],
+            with: "App",
+            includeProto: false,
+            includeLocalIDFor: nil,
+            includeBackingData: false,
+            with: "Proto"
         )
     }
 
-    func testLocalIDs() throws {
+    @Test func localIDs() throws {
         let simpleMessageProtoMessage = ProtoMessage(
             name: "Person",
             fields: [
@@ -520,6 +514,6 @@ final class GeneratorTests: XCTestCase {
             return components.count == 2
         }
 
-        XCTAssert(containsExactlyOneInstance(of: "public let _localID = UUID()", in: generatedCode))
+        #expect(containsExactlyOneInstance(of: "public let _localID = UUID()", in: generatedCode))
     }
 }

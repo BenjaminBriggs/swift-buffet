@@ -1,22 +1,23 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
 /// Characterization corpus for `parseProto`.
 ///
 /// These tests pin the parsing contract established before the regex →
 /// recursive-descent migration, including inputs the regex parser mishandled.
-final class ParserCorpusTests: XCTestCase {
+@Suite struct ParserCorpusTests {
 
-    func testEmptyMessageSingleLine() throws {
+    @Test func emptyMessageSingleLine() throws {
         let proto = "message Empty {}"
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(enums.count, 0)
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages.first?.name, "Empty")
-        XCTAssertEqual(messages.first?.fields.count, 0)
+        #expect(enums.count == 0)
+        #expect(messages.count == 1)
+        #expect(messages.first?.name == "Empty")
+        #expect(messages.first?.fields.count == 0)
     }
 
-    func testSimpleMessageFieldTypes() throws {
+    @Test func simpleMessageFieldTypes() throws {
         let proto = """
         message Person {
         string name = 1;
@@ -25,17 +26,17 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
+        #expect(messages.count == 1)
         let fields = messages[0].fields
-        XCTAssertEqual(fields.map(\.name), ["name", "age", "is_active"])
-        XCTAssertEqual(fields.map(\.type), ["string", "int32", "bool"])
-        XCTAssertTrue(fields.allSatisfy { $0.isOptional == false })
-        XCTAssertTrue(fields.allSatisfy { $0.isRepeated == false })
-        XCTAssertTrue(fields.allSatisfy { $0.isMap == false })
-        XCTAssertTrue(fields.allSatisfy { $0.isDeprecated == false })
+        #expect(fields.map(\.name) == ["name", "age", "is_active"])
+        #expect(fields.map(\.type) == ["string", "int32", "bool"])
+        #expect(fields.allSatisfy { $0.isOptional == false })
+        #expect(fields.allSatisfy { $0.isRepeated == false })
+        #expect(fields.allSatisfy { $0.isMap == false })
+        #expect(fields.allSatisfy { $0.isDeprecated == false })
     }
 
-    func testMultipleTopLevelDeclarations() throws {
+    @Test func multipleTopLevelDeclarations() throws {
         let proto = """
         message A {
         string x = 1;
@@ -51,14 +52,14 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(Set(messages.map(\.name)), ["A", "B"])
-        XCTAssertEqual(enums.map(\.name), ["Color"])
-        XCTAssertEqual(enums.first?.cases.count, 2)
-        XCTAssertNil(messages.first?.parentName)
-        XCTAssertNil(enums.first?.parentName)
+        #expect(Set(messages.map(\.name)) == ["A", "B"])
+        #expect(enums.map(\.name) == ["Color"])
+        #expect(enums.first?.cases.count == 2)
+        #expect(messages.first?.parentName == nil)
+        #expect(enums.first?.parentName == nil)
     }
 
-    func testNestedMessageTwoLevels() throws {
+    @Test func nestedMessageTwoLevels() throws {
         let proto = """
         message Outer {
         string a = 1;
@@ -71,19 +72,19 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 3)
+        #expect(messages.count == 3)
         let outer = messages.first { $0.name == "Outer" }
         let middle = messages.first { $0.name == "Middle" }
         let inner = messages.first { $0.name == "Inner" }
-        XCTAssertNil(outer?.parentName)
-        XCTAssertEqual(middle?.parentName, "Outer")
-        XCTAssertEqual(inner?.parentName, "Middle")
-        XCTAssertEqual(outer?.fields.map(\.name), ["a"])
-        XCTAssertEqual(middle?.fields.map(\.name), ["b"])
-        XCTAssertEqual(inner?.fields.map(\.name), ["c"])
+        #expect(outer?.parentName == nil)
+        #expect(middle?.parentName == "Outer")
+        #expect(inner?.parentName == "Middle")
+        #expect(outer?.fields.map(\.name) == ["a"])
+        #expect(middle?.fields.map(\.name) == ["b"])
+        #expect(inner?.fields.map(\.name) == ["c"])
     }
 
-    func testNestedEnumInMessage() throws {
+    @Test func nestedEnumInMessage() throws {
         let proto = """
         message Person {
         enum Gender {
@@ -94,14 +95,14 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(enums.count, 1)
-        XCTAssertEqual(enums.first?.parentName, "Person")
-        XCTAssertEqual(enums.first?.cases.map(\.value), [0, 1])
-        XCTAssertEqual(messages.first?.fields.map(\.type), ["Gender"])
+        #expect(messages.count == 1)
+        #expect(enums.count == 1)
+        #expect(enums.first?.parentName == "Person")
+        #expect(enums.first?.cases.map(\.value) == [0, 1])
+        #expect(messages.first?.fields.map(\.type) == ["Gender"])
     }
 
-    func testOptionalAndRepeatedFields() throws {
+    @Test func optionalAndRepeatedFields() throws {
         let proto = """
         message Bag {
         optional string label = 1;
@@ -110,13 +111,13 @@ final class ParserCorpusTests: XCTestCase {
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
         let fields = messages[0].fields
-        XCTAssertTrue(fields[0].isOptional)
-        XCTAssertFalse(fields[0].isRepeated)
-        XCTAssertTrue(fields[1].isRepeated)
-        XCTAssertFalse(fields[1].isOptional)
+        #expect(fields[0].isOptional)
+        #expect(fields[0].isRepeated == false)
+        #expect(fields[1].isRepeated)
+        #expect(fields[1].isOptional == false)
     }
 
-    func testMapFields() throws {
+    @Test func mapFields() throws {
         let proto = """
         message Lookup {
         map<string, int32> scores = 1;
@@ -129,13 +130,13 @@ final class ParserCorpusTests: XCTestCase {
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
         let lookup = messages.first { $0.name == "Lookup" }!
-        XCTAssertTrue(lookup.fields[0].isMap)
-        XCTAssertEqual(lookup.fields[0].caseCorrectedBaseType, "[String: Int]")
-        XCTAssertTrue(lookup.fields[1].isMap)
-        XCTAssertEqual(lookup.fields[1].caseCorrectedBaseType, "[String: Person]")
+        #expect(lookup.fields[0].isMap)
+        #expect(lookup.fields[0].caseCorrectedBaseType == "[String: Int]")
+        #expect(lookup.fields[1].isMap)
+        #expect(lookup.fields[1].caseCorrectedBaseType == "[String: Person]")
     }
 
-    func testDeprecatedFieldOption() throws {
+    @Test func deprecatedFieldOption() throws {
         let proto = """
         message Address {
         string street = 1 [deprecated = true];
@@ -143,11 +144,11 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertTrue(messages[0].fields[0].isDeprecated)
-        XCTAssertFalse(messages[0].fields[1].isDeprecated)
+        #expect(messages[0].fields[0].isDeprecated)
+        #expect(messages[0].fields[1].isDeprecated == false)
     }
 
-    func testDocCommentOnField() throws {
+    @Test func docCommentOnField() throws {
         let proto = """
         message Person {
         /** The person's legal name. */
@@ -157,13 +158,13 @@ final class ParserCorpusTests: XCTestCase {
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
         let nameField = messages[0].fields.first { $0.name == "name" }!
-        XCTAssertNotNil(nameField.comment)
-        XCTAssertTrue(nameField.comment?.contains("legal name") == true)
+        #expect(nameField.comment != nil)
+        #expect(nameField.comment?.contains("legal name") == true)
         let ageField = messages[0].fields.first { $0.name == "age" }!
-        XCTAssertNil(ageField.comment)
+        #expect(ageField.comment == nil)
     }
 
-    func testEnumCommonPrefixCases() throws {
+    @Test func enumCommonPrefixCases() throws {
         let proto = """
         enum Gender {
         GENDER_UNKNOWN = 0;
@@ -172,31 +173,29 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (_, enums) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(enums.count, 1)
-        XCTAssertEqual(enums[0].cases.map(\.name), ["GENDER_UNKNOWN", "GENDER_MALE", "GENDER_FEMALE"])
-        XCTAssertEqual(enums[0].cases.map(\.value), [0, 1, 2])
+        #expect(enums.count == 1)
+        #expect(enums[0].cases.map(\.name) == ["GENDER_UNKNOWN", "GENDER_MALE", "GENDER_FEMALE"])
+        #expect(enums[0].cases.map(\.value) == [0, 1, 2])
         let stripped = stripCommonPrefix(from: enums[0].cases)
-        XCTAssertEqual(stripped.map(\.name), ["unknown", "male", "female"])
+        #expect(stripped.map(\.name) == ["unknown", "male", "female"])
     }
 
-    func testSingleCaseEnumKeepsAUsableName() throws {
+    @Test func singleCaseEnumKeepsAUsableName() throws {
         let stripped = stripCommonPrefix(from: [
             ProtoEnumCase(name: "S_UNKNOWN", value: 0)
         ])
-        XCTAssertEqual(stripped.map(\.name), ["sUnknown"],
-                       "A single case is its own common prefix and must not be stripped")
+        #expect(stripped.map(\.name) == ["sUnknown"], "A single case is its own common prefix and must not be stripped")
     }
 
-    func testPrefixEqualToWholeCaseNameIsNotStripped() throws {
+    @Test func prefixEqualToWholeCaseNameIsNotStripped() throws {
         let stripped = stripCommonPrefix(from: [
             ProtoEnumCase(name: "GENDER", value: 0),
             ProtoEnumCase(name: "GENDER_MALE", value: 1)
         ])
-        XCTAssertEqual(stripped.map(\.name), ["gender", "genderMale"],
-                       "Stripping must back off entirely when it would empty a name")
+        #expect(stripped.map(\.name) == ["gender", "genderMale"], "Stripping must back off entirely when it would empty a name")
     }
 
-    func testHeaderStatementsIgnored() throws {
+    @Test func headerStatementsIgnored() throws {
         let proto = """
         syntax = "proto3";
         package com.example.app;
@@ -208,37 +207,37 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(enums.count, 0)
-        XCTAssertEqual(messages[0].fields[0].type, "google.protobuf.Timestamp")
+        #expect(messages.count == 1)
+        #expect(enums.count == 0)
+        #expect(messages[0].fields[0].type == "google.protobuf.Timestamp")
     }
 
-    func testVariedWhitespace() throws {
+    @Test func variedWhitespace() throws {
         let proto = "message A {\n\tstring x = 1;\n\n\n  int32   y   =   2 ;\n}"
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages[0].fields.map(\.name), ["x", "y"])
+        #expect(messages.count == 1)
+        #expect(messages[0].fields.map(\.name) == ["x", "y"])
     }
 
-    func testClosingBraceOnSameLineAsField() throws {
+    @Test func closingBraceOnSameLineAsField() throws {
         let proto = "message A { string x = 1; }"
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
+        #expect(messages.count == 1)
+        #expect(messages.first?.fields.map(\.name) == ["x"])
     }
 
-    func testClosingBraceIndented() throws {
+    @Test func closingBraceIndented() throws {
         let proto = """
         message A {
             string x = 1;
             }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages.first?.fields.map(\.name), ["x"])
+        #expect(messages.count == 1)
+        #expect(messages.first?.fields.map(\.name) == ["x"])
     }
 
-    func testDocCommentsInAllPositions() throws {
+    @Test func docCommentsInAllPositions() throws {
         let proto = """
         /** File-level overview comment. */
         message Person {
@@ -256,15 +255,15 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(enums.count, 1)
-        XCTAssertEqual(messages[0].fields.map(\.name), ["name", "age"])
-        XCTAssertTrue(messages[0].fields[0].comment?.contains("second comment wins") == true)
-        XCTAssertNil(messages[0].fields[1].comment)
-        XCTAssertEqual(enums[0].cases.map(\.name), ["PLAN_FREE"])
+        #expect(messages.count == 1)
+        #expect(enums.count == 1)
+        #expect(messages[0].fields.map(\.name) == ["name", "age"])
+        #expect(messages[0].fields[0].comment?.contains("second comment wins") == true)
+        #expect(messages[0].fields[1].comment == nil)
+        #expect(enums[0].cases.map(\.name) == ["PLAN_FREE"])
     }
 
-    func testCustomParenthesizedFieldOptions() throws {
+    @Test func customParenthesizedFieldOptions() throws {
         let proto = """
         message User {
         string email = 1 [(validate.rules).string.min_len = 1];
@@ -274,14 +273,14 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages[0].fields.map(\.name), ["email", "name", "ratio", "street"])
-        XCTAssertFalse(messages[0].fields[0].isDeprecated)
-        XCTAssertFalse(messages[0].fields[2].isDeprecated)
-        XCTAssertTrue(messages[0].fields[3].isDeprecated)
+        #expect(messages.count == 1)
+        #expect(messages[0].fields.map(\.name) == ["email", "name", "ratio", "street"])
+        #expect(messages[0].fields[0].isDeprecated == false)
+        #expect(messages[0].fields[2].isDeprecated == false)
+        #expect(messages[0].fields[3].isDeprecated)
     }
 
-    func testAggregateOptionValuesIgnored() throws {
+    @Test func aggregateOptionValuesIgnored() throws {
         let proto = """
         syntax = "proto3";
         option (my.file_option) = { key: "value" nested: { flag: true } };
@@ -292,11 +291,11 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages[0].fields.map(\.name), ["path"])
+        #expect(messages.count == 1)
+        #expect(messages[0].fields.map(\.name) == ["path"])
     }
 
-    func testDottedCustomOptionEndingInDeprecatedIsNotDeprecated() throws {
+    @Test func dottedCustomOptionEndingInDeprecatedIsNotDeprecated() throws {
         let proto = """
         message M {
         int32 a = 1 [(my.ext).deprecated = true];
@@ -304,13 +303,11 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertFalse(messages[0].fields[0].isDeprecated,
-                       "A dotted custom option ending in .deprecated is not the standard option")
-        XCTAssertTrue(messages[0].fields[1].isDeprecated,
-                      "deprecated = true after a comma is the standard option")
+        #expect(messages[0].fields[0].isDeprecated == false, "A dotted custom option ending in .deprecated is not the standard option")
+        #expect(messages[0].fields[1].isDeprecated, "deprecated = true after a comma is the standard option")
     }
 
-    func testOneofMembersBecomeFields() throws {
+    @Test func oneofMembersBecomeFields() throws {
         let proto = """
         message Event {
         string id = 1;
@@ -322,14 +319,11 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(
-            messages[0].fields.map(\.name),
-            ["id", "click", "view", "source"]
-        )
+        #expect(messages.count == 1)
+        #expect(messages[0].fields.map(\.name) == ["id", "click", "view", "source"])
     }
 
-    func testDeepNestingPreservesFullParentPath() throws {
+    @Test func deepNestingPreservesFullParentPath() throws {
         let proto = """
         message A {
         message B {
@@ -342,14 +336,14 @@ final class ParserCorpusTests: XCTestCase {
         """
         let (messages, enums) = try parseProto(proto, swiftPrefix: "")
         let b = messages.first { $0.name == "B" }!
-        XCTAssertEqual(b.parentName, "A")
-        XCTAssertEqual(b.fullName, "A.B")
+        #expect(b.parentName == "A")
+        #expect(b.fullName == "A.B")
         let status = enums.first { $0.name == "Status" }!
-        XCTAssertEqual(status.parentName, "B")
-        XCTAssertEqual(status.fullName, "A.B.Status")
+        #expect(status.parentName == "B")
+        #expect(status.fullName == "A.B.Status")
     }
 
-    func testKeywordLikeFieldNames() throws {
+    @Test func keywordLikeFieldNames() throws {
         let proto = """
         message Config {
         string message_text = 1;
@@ -357,7 +351,7 @@ final class ParserCorpusTests: XCTestCase {
         }
         """
         let (messages, _) = try parseProto(proto, swiftPrefix: "")
-        XCTAssertEqual(messages.count, 1)
-        XCTAssertEqual(messages[0].fields.map(\.name), ["message_text", "option"])
+        #expect(messages.count == 1)
+        #expect(messages[0].fields.map(\.name) == ["message_text", "option"])
     }
 }

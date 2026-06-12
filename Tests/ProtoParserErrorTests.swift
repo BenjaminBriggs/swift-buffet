@@ -1,7 +1,8 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
-final class ProtoParserErrorTests: XCTestCase {
+@Suite struct ProtoParserErrorTests {
 
     private func parseError(_ source: String) -> ParseError? {
         do {
@@ -10,59 +11,59 @@ final class ProtoParserErrorTests: XCTestCase {
         } catch let error as ParseError {
             return error
         } catch {
-            XCTFail("Expected ParseError, got \(error)")
+            Issue.record("Expected ParseError, got \(error)")
             return nil
         }
     }
 
-    func testMissingSemicolonAfterField() {
+    @Test func missingSemicolonAfterField() {
         let proto = """
         message A {
         string x = 1
         }
         """
         let error = parseError(proto)
-        XCTAssertNotNil(error)
-        XCTAssertEqual(error?.line, 3)
-        XCTAssertEqual(error?.expected, "';'")
+        #expect(error != nil)
+        #expect(error?.line == 3)
+        #expect(error?.expected == "';'")
     }
 
-    func testMissingBraceAfterMessageName() {
+    @Test func missingBraceAfterMessageName() {
         let proto = "message A string x = 1; }"
         let error = parseError(proto)
-        XCTAssertNotNil(error)
-        XCTAssertEqual(error?.line, 1)
-        XCTAssertEqual(error?.expected, "'{'")
+        #expect(error != nil)
+        #expect(error?.line == 1)
+        #expect(error?.expected == "'{'")
     }
 
-    func testMissingFieldNumber() {
+    @Test func missingFieldNumber() {
         let proto = """
         message A {
         string x = ;
         }
         """
         let error = parseError(proto)
-        XCTAssertNotNil(error)
-        XCTAssertEqual(error?.line, 2)
-        XCTAssertEqual(error?.expected, "a field number")
+        #expect(error != nil)
+        #expect(error?.line == 2)
+        #expect(error?.expected == "a field number")
     }
 
-    func testUnexpectedEndOfFileInsideMessage() {
+    @Test func unexpectedEndOfFileInsideMessage() {
         let proto = """
         message A {
         string x = 1;
         """
         let error = parseError(proto)
-        XCTAssertNotNil(error)
-        XCTAssertEqual(error?.found, "end of file")
+        #expect(error != nil)
+        #expect(error?.found == "end of file")
     }
 
-    func testUnknownTopLevelStatement() {
+    @Test func unknownTopLevelStatement() {
         let proto = "rpc Foo (Bar) returns (Baz);"
-        XCTAssertNotNil(parseError(proto))
+        #expect(parseError(proto) != nil)
     }
 
-    func testOneofMembersAreParsedAsFields() throws {
+    @Test func oneofMembersAreParsedAsFields() throws {
         let proto = """
         message A {
         string x = 1;
@@ -74,11 +75,11 @@ final class ProtoParserErrorTests: XCTestCase {
         }
         """
         let file = try ProtoParser.parse(proto, verbose: false)
-        XCTAssertEqual(file.messages.count, 1)
-        XCTAssertEqual(file.messages[0].fields.map(\.name), ["x", "a", "b", "y"])
+        #expect(file.messages.count == 1)
+        #expect(file.messages[0].fields.map(\.name) == ["x", "a", "b", "y"])
     }
 
-    func testServiceIsSkippedWithoutError() throws {
+    @Test func serviceIsSkippedWithoutError() throws {
         let proto = """
         service Greeter {
         rpc SayHello (HelloRequest) returns (HelloReply);
@@ -89,10 +90,10 @@ final class ProtoParserErrorTests: XCTestCase {
         }
         """
         let file = try ProtoParser.parse(proto, verbose: false)
-        XCTAssertEqual(file.messages.map(\.name), ["HelloRequest"])
+        #expect(file.messages.map(\.name) == ["HelloRequest"])
     }
 
-    func testReservedIsSkippedSilently() throws {
+    @Test func reservedIsSkippedSilently() throws {
         let proto = """
         message A {
         reserved 2, 15;
@@ -101,6 +102,6 @@ final class ProtoParserErrorTests: XCTestCase {
         }
         """
         let file = try ProtoParser.parse(proto, verbose: false)
-        XCTAssertEqual(file.messages[0].fields.map(\.name), ["x"])
+        #expect(file.messages[0].fields.map(\.name) == ["x"])
     }
 }

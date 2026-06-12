@@ -1,8 +1,9 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
 /// Tests targeting the generated `init?(proto:)` bodies.
-final class ProtoInitTests: XCTestCase {
+@Suite struct ProtoInitTests {
 
     private func makeField(
         name: String,
@@ -29,17 +30,15 @@ final class ProtoInitTests: XCTestCase {
         _ code: String,
         _ fragment: String,
         _ message: String = "",
-        file: StaticString = #filePath,
-        line: UInt = #line
+        sourceLocation: SourceLocation = #_sourceLocation
     ) {
         func normalized(_ string: String) -> String {
             string.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         }
-        XCTAssertTrue(
+        #expect(
             normalized(code).contains(normalized(fragment)),
-            message.isEmpty ? "Missing fragment: \(fragment)" : message,
-            file: file,
-            line: line
+            Comment(rawValue: message.isEmpty ? "Missing fragment: \(fragment)" : message),
+            sourceLocation: sourceLocation
         )
     }
 
@@ -55,7 +54,7 @@ final class ProtoInitTests: XCTestCase {
         )
     }
 
-    func testSignedIntConversion() throws {
+    @Test func signedIntConversion() throws {
         let code = try generate(fields: [
             makeField(name: "age", type: "int32"),
             makeField(name: "score", type: "sint64")
@@ -64,10 +63,10 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "public let age: Int")
         assertContains(code, "self.age = Int(proto.age)")
         assertContains(code, "self.score = Int(proto.score)")
-        XCTAssertFalse(code.contains("Int(exactly:"), "Generated code should not force-unwrap int conversions")
+        #expect(code.contains("Int(exactly:") == false, "Generated code should not force-unwrap int conversions")
     }
 
-    func testUnsignedIntConversion() throws {
+    @Test func unsignedIntConversion() throws {
         let code = try generate(fields: [
             makeField(name: "counter", type: "uint64"),
             makeField(name: "flags", type: "fixed32")
@@ -76,10 +75,10 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "public let counter: UInt")
         assertContains(code, "self.counter = UInt(proto.counter)", "Unsigned proto ints should convert via UInt, not Int")
         assertContains(code, "self.flags = UInt(proto.flags)")
-        XCTAssertFalse(code.contains("Int(exactly:"))
+        #expect(code.contains("Int(exactly:") == false)
     }
 
-    func testOptionalFieldHasCheck() throws {
+    @Test func optionalFieldHasCheck() throws {
         let code = try generate(fields: [
             makeField(name: "nick_name", type: "string", isOptional: true)
         ])
@@ -89,7 +88,7 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "self.nickName = nil")
     }
 
-    func testRepeatedFields() throws {
+    @Test func repeatedFields() throws {
         let code = try generate(fields: [
             makeField(name: "scores", type: "int32", isRepeated: true),
             makeField(name: "addresses", type: "Address", isRepeated: true),
@@ -102,7 +101,7 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "self.imageURLs = proto.imageURLs.compactMap { URL(string: $0) }", "Repeated URL fields should convert via URL(string:)")
     }
 
-    func testMapField() throws {
+    @Test func mapField() throws {
         let code = try generate(fields: [
             makeField(name: "labels", type: "<string, string>", isMap: true)
         ])
@@ -111,7 +110,7 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "self.labels = proto.labels.reduce(into: [String: String]()) { result, element in result[element.key] = element.value }")
     }
 
-    func testURLFields() throws {
+    @Test func uRLFields() throws {
         let code = try generate(fields: [
             makeField(name: "home_url", type: "string"),
             makeField(name: "avatar_url", type: "string", isOptional: true)
@@ -124,7 +123,7 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "self.avatarURL = URL(string: proto.avatarURL)")
     }
 
-    func testDescriptionFieldUsesProtoEscapedName() throws {
+    @Test func descriptionFieldUsesProtoEscapedName() throws {
         let code = try generate(fields: [
             makeField(name: "description", type: "string"),
             makeField(name: "summary", type: "Summary")
@@ -135,7 +134,7 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "self.summary = summary", "The bound local, not the proto property name, should be assigned")
     }
 
-    func testWellKnownTypeFields() throws {
+    @Test func wellKnownTypeFields() throws {
         let code = try generate(fields: [
             makeField(name: "duration", type: "google.protobuf.Duration"),
             makeField(name: "created_at", type: "google.protobuf.Timestamp")
@@ -145,7 +144,7 @@ final class ProtoInitTests: XCTestCase {
         assertContains(code, "self.createdAt = proto.createdAt.date")
     }
 
-    func testBackingDataProperty() throws {
+    @Test func backingDataProperty() throws {
         let messages = [ProtoMessage(
             name: "Person",
             fields: [makeField(name: "name", type: "string")],

@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
 /// A single deliberately hostile — but entirely valid — proto3 file
@@ -10,7 +11,7 @@ import XCTest
 /// three-level nesting, name-shadowed nested enums, negative enum values,
 /// `allow_alias` duplicate values, reserved ranges/names, extend blocks,
 /// and a streaming service.
-final class TortureProtoTests: XCTestCase {
+@Suite struct TortureProtoTests {
 
     static let torture = #"""
     // SwiftBuffet torture fixture. Valid proto3 throughout.
@@ -174,71 +175,65 @@ final class TortureProtoTests: XCTestCase {
     /** Trailing file-level comment. */
     """#
 
-    func testParsesEveryConstruct() throws {
+    @Test func parsesEveryConstruct() throws {
         let (messages, enums) = try parseProto(Self.torture, swiftPrefix: "App")
 
-        XCTAssertEqual(
-            Set(messages.map(\.name)),
-            ["BuffetMeta", "TorturePrimary", "NestedLevel1", "NestedLevel2",
-             "Alpha", "Beta", "Tiny"]
-        )
-        XCTAssertEqual(
-            Set(enums.map(\.name)),
-            ["DeepEnum", "Status", "SingleValue", "Version", "Aliased"]
-        )
-        XCTAssertEqual(enums.count, 6, "Both shadowed Status enums must survive")
+        #expect(Set(messages.map(\.name)) == ["BuffetMeta", "TorturePrimary", "NestedLevel1", "NestedLevel2",
+             "Alpha", "Beta", "Tiny"])
+        #expect(Set(enums.map(\.name)) == ["DeepEnum", "Status", "SingleValue", "Version", "Aliased"])
+        #expect(enums.count == 6, "Both shadowed Status enums must survive")
     }
 
-    func testPrimaryMessageFields() throws {
+    @Test func primaryMessageFields() throws {
         let (messages, _) = try parseProto(Self.torture, swiftPrefix: "App")
         let primary = messages.first { $0.name == "TorturePrimary" }!
         let fieldsByName = Dictionary(
             uniqueKeysWithValues: primary.fields.map { ($0.name, $0) }
         )
 
-        XCTAssertEqual(primary.fields.count, 37)
+        #expect(primary.fields.count == 37)
 
         // Hex and octal field numbers lex correctly (presence proves it).
-        XCTAssertNotNil(fieldsByName["a_fixed64"])
-        XCTAssertNotNil(fieldsByName["a_sfixed32"])
+        #expect(fieldsByName["a_fixed64"] != nil)
+        #expect(fieldsByName["a_sfixed32"] != nil)
 
         // Keyword-like names are ordinary fields.
-        XCTAssertNotNil(fieldsByName["message"])
-        XCTAssertNotNil(fieldsByName["option_like"])
+        #expect(fieldsByName["message"] != nil)
+        #expect(fieldsByName["option_like"] != nil)
 
         // oneof members are fields of the enclosing message.
-        XCTAssertNotNil(fieldsByName["text_payload"])
-        XCTAssertNotNil(fieldsByName["nested_payload"])
+        #expect(fieldsByName["text_payload"] != nil)
+        #expect(fieldsByName["nested_payload"] != nil)
 
         // Option soup: plain deprecated sticks, dotted custom option doesn't.
-        XCTAssertTrue(fieldsByName["an_int32"]!.isDeprecated)
-        XCTAssertTrue(fieldsByName["tricky"]!.isDeprecated)
-        XCTAssertFalse(fieldsByName["innocent"]!.isDeprecated)
+        #expect(fieldsByName["an_int32"]!.isDeprecated)
+        #expect(fieldsByName["tricky"]!.isDeprecated)
+        #expect(fieldsByName["innocent"]!.isDeprecated == false)
 
         // Maps with each key kind.
-        XCTAssertEqual(fieldsByName["labels"]!.caseCorrectedBaseType, "[String: String]")
-        XCTAssertEqual(fieldsByName["children_by_id"]!.caseCorrectedBaseType, "[Int: AppNestedLevel1]")
-        XCTAssertEqual(fieldsByName["flags"]!.caseCorrectedBaseType, "[Bool: String]")
-        XCTAssertEqual(fieldsByName["metrics"]!.caseCorrectedBaseType, "[Int: Double]")
+        #expect(fieldsByName["labels"]!.caseCorrectedBaseType == "[String: String]")
+        #expect(fieldsByName["children_by_id"]!.caseCorrectedBaseType == "[Int: AppNestedLevel1]")
+        #expect(fieldsByName["flags"]!.caseCorrectedBaseType == "[Bool: String]")
+        #expect(fieldsByName["metrics"]!.caseCorrectedBaseType == "[Int: Double]")
 
         // Leading-dot absolute reference normalizes to the well-known type.
-        XCTAssertEqual(fieldsByName["session_length"]!.type, "google.protobuf.Duration")
-        XCTAssertEqual(fieldsByName["session_length"]!.caseCorrectedBaseType, "TimeInterval")
+        #expect(fieldsByName["session_length"]!.type == "google.protobuf.Duration")
+        #expect(fieldsByName["session_length"]!.caseCorrectedBaseType == "TimeInterval")
     }
 
-    func testDeepNestingAndEnumValues() throws {
+    @Test func deepNestingAndEnumValues() throws {
         let (_, enums) = try parseProto(Self.torture, swiftPrefix: "App")
 
         let deep = enums.first { $0.name == "DeepEnum" }!
-        XCTAssertEqual(deep.parentPath, ["TorturePrimary", "NestedLevel1", "NestedLevel2"])
-        XCTAssertEqual(deep.fullName, "TorturePrimary.NestedLevel1.NestedLevel2.DeepEnum")
-        XCTAssertEqual(deep.cases.map(\.value), [0, -1, 2])
+        #expect(deep.parentPath == ["TorturePrimary", "NestedLevel1", "NestedLevel2"])
+        #expect(deep.fullName == "TorturePrimary.NestedLevel1.NestedLevel2.DeepEnum")
+        #expect(deep.cases.map(\.value) == [0, -1, 2])
 
         let aliased = enums.first { $0.name == "Aliased" }!
-        XCTAssertEqual(aliased.cases.map(\.value), [0, 1, 1])
+        #expect(aliased.cases.map(\.value) == [0, 1, 1])
     }
 
-    func testGeneratesValidSwift() throws {
+    @Test func generatesValidSwift() throws {
         let (messages, enums) = try parseProto(Self.torture, swiftPrefix: "App")
 
         // The internal SwiftParser gate throws if the output is not valid Swift.
@@ -253,20 +248,19 @@ final class TortureProtoTests: XCTestCase {
         )
 
         // Shadowed nested enums live in separate extensions.
-        XCTAssertTrue(code.contains("extension AppAlpha"))
-        XCTAssertTrue(code.contains("extension AppBeta"))
+        #expect(code.contains("extension AppAlpha"))
+        #expect(code.contains("extension AppBeta"))
 
         // Deep nesting uses the full proto type path.
-        XCTAssertTrue(code.contains("internal init?(proto: ProtoTorturePrimary.NestedLevel1.NestedLevel2)"))
+        #expect(code.contains("internal init?(proto: ProtoTorturePrimary.NestedLevel1.NestedLevel2)"))
 
         // Aliased enum values collapse to one case per raw value.
-        XCTAssertTrue(code.contains("case active = 1"))
-        XCTAssertFalse(code.contains("case enabled = 1"),
-                       "allow_alias duplicates must not produce duplicate raw values")
+        #expect(code.contains("case active = 1"))
+        #expect(code.contains("case enabled = 1") == false, "allow_alias duplicates must not produce duplicate raw values")
 
         // URL conveniences.
-        XCTAssertTrue(code.contains("public let imageURLs: [URL]"))
-        XCTAssertTrue(code.contains("public let homeURL: URL"))
-        XCTAssertTrue(code.contains("public let avatarUri: URL?"))
+        #expect(code.contains("public let imageURLs: [URL]"))
+        #expect(code.contains("public let homeURL: URL"))
+        #expect(code.contains("public let avatarUri: URL?"))
     }
 }

@@ -1,10 +1,11 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
 /// Full-pipeline golden snapshots: proto source → parseProto → generateSwiftCode.
 ///
 /// Baselines reflect the SwiftSyntax generator's formatted output.
-final class GoldenTests: XCTestCase {
+@Suite struct GoldenTests {
 
     private func generate(
         _ proto: String,
@@ -23,7 +24,7 @@ final class GoldenTests: XCTestCase {
         )
     }
 
-    func testGoldenExampleProto() throws {
+    @Test func goldenExampleProto() throws {
         let proto = """
         syntax = "proto3";
 
@@ -129,10 +130,10 @@ final class GoldenTests: XCTestCase {
 
         """#
 
-        XCTAssertEqual(generated, expected)
+        #expect(generated == expected)
     }
 
-    func testGoldenKitchenSink() throws {
+    @Test func goldenKitchenSink() throws {
         let proto = """
         syntax = "proto3";
         package com.example;
@@ -247,6 +248,6 @@ final class GoldenTests: XCTestCase {
 
         """#
 
-        XCTAssertEqual(generated, expected)
+        #expect(generated == expected)
     }
 }

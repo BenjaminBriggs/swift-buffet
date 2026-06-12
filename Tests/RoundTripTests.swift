@@ -1,4 +1,5 @@
-import XCTest
+import Testing
+import Foundation
 @testable import SwiftBuffet
 
 /// Round-trip validation: every proto in the corpus must generate Swift that
@@ -6,7 +7,7 @@ import XCTest
 /// The parse check itself is generateSwiftCode's internal validation gate,
 /// which throws GenerationError on any diagnostic — this suite drives that
 /// gate across the corpus and flag matrix.
-final class RoundTripTests: XCTestCase {
+@Suite struct RoundTripTests {
 
     private let corpus: [String: String] = [
         "empty message": "message Empty {}",
@@ -79,7 +80,7 @@ final class RoundTripTests: XCTestCase {
         """,
     ]
 
-    func testGeneratedSwiftParsesCleanly() throws {
+    @Test func generatedSwiftParsesCleanly() throws {
         for (label, proto) in corpus {
             let (messages, enums) = try parseProto(proto, swiftPrefix: "App")
             for includeProto in [false, true] {
@@ -95,7 +96,7 @@ final class RoundTripTests: XCTestCase {
                             with: "Proto"
                         )
                     } catch {
-                        XCTFail("Corpus entry '\(label)' (includeProto: \(includeProto), backingData: \(backingData)) failed: \(error)")
+                        Issue.record("Corpus entry '\(label)' (includeProto: \(includeProto), backingData: \(backingData)) failed: \(error)")
                     }
                 }
             }
