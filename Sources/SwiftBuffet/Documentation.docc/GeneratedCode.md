@@ -1,9 +1,7 @@
 # Anatomy of the Generated Code
-
 What Swift Buffet produces for each proto construct, and the naming and type-mapping rules it applies.
 
 ## Type mapping
-
 | Proto type | Swift type |
 | --- | --- |
 | `double` | `Double` |
@@ -21,18 +19,15 @@ What Swift Buffet produces for each proto construct, and the naming and type-map
 | proto3 `optional T` | `T'?` (except `bool`, which stays non-optional and defaults to `false`) |
 
 ## Naming rules
-
 - Field names convert from `snake_case` to `camelCase`: `is_active` → `isActive`.
 - Names containing `_url` or `_id` get their abbreviations capitalized: `home_url` → `homeURL`, `user_id` → `userID`.
 - **URL convenience:** a `string` field whose corrected name ends in `URL` or `URI` is typed as `URL` instead of `String` (and `[URL]` for `repeated` fields whose name ends in `URLS`/`URIS`). Conversion happens in `init?(proto:)` via `URL(string:)` and fails the initializer for required fields with unparseable values.
 - The field name `description` is accessed as `description_p` on SwiftProtobuf types, matching SwiftProtobuf's escaping.
 
 ## Messages
-
 Each message becomes a top-level `public struct` conforming to `Hashable`, `Equatable`, and `Sendable`, with `let` properties and a memberwise initializer. Proto doc comments (`/** ... */`) on fields carry over as comments on the generated properties, and `[deprecated = true]` adds a deprecation notice comment.
 
 With `--include-protobuf`, two more initializers are generated:
-
 ```swift
 public init?(data: Data) {
     if let proto = try? ProtoPerson(serializedBytes: data) {
@@ -52,7 +47,6 @@ internal init?(proto: ProtoPerson) {
     }
 }
 ```
-
 Conversion rules inside `init?(proto:)`:
 
 - **Optional fields** are guarded with SwiftProtobuf's `has<Field>` check; absent values default to `nil` (`false` for `bool`, `[]` for `repeated`).
@@ -63,9 +57,7 @@ Conversion rules inside `init?(proto:)`:
 - **`Timestamp`/`Duration`** use SwiftProtobuf's `.date` / `.timeInterval`.
 
 ## Enums
-
 Enums become `Int`-raw-value enums conforming to `CaseIterable`, `Hashable`, `Equatable`, and `Sendable`:
-
 ```proto
 enum Gender {
     GENDER_UNKNOWN = 0;
@@ -81,18 +73,14 @@ public enum AppGender: Int, CaseIterable, Hashable, Equatable, Sendable {
     case female = 2
 }
 ```
-
 - The shared `SCREAMING_SNAKE` prefix is stripped, but only at an underscore boundary, never for single-case enums, and never when stripping would leave an empty or digit-leading name (those cases keep their full name: `VERSION_1` → `version1`).
 - `allow_alias` duplicates collapse to one Swift case per raw value — the first name wins.
 - With `--include-protobuf`, enums gain `init?(proto:)` bridging by raw value.
 
 ## Nesting
-
 Generated structs are always emitted at the top level, regardless of proto nesting — a nested message `Outer.Inner` becomes `struct <prefix>Inner`. Nested **enums** are emitted inside an `extension` of their parent struct, so proto `Person.Gender` is Swift `AppPerson.AppGender`. Protobuf bridging always references the fully qualified SwiftProtobuf name (`ProtoOuter.Inner`).
-
 Because the Swift namespace is flattened, two messages with the same name under different parents would collide; generation fails with an error naming both types.
 
 ## Optional extras
-
 - `--local-id-messages Person` adds `public let _localID = UUID()` to `Person` — a stable identity for SwiftUI's `Identifiable`/`ForEach` even when the decoded content is equal.
 - `--store-backing-data` adds `public private(set) var _backingData: Data?`, populated with the original bytes by `init?(data:)` — useful for re-serializing or caching without a round trip.

@@ -2,9 +2,13 @@ import Foundation
 
 /// Maps a protocol buffer type to its corresponding Swift type.
 ///
+/// Scalars and the supported well-known types map to standard library types.
+/// Anything else is assumed to be a message or enum reference and is prefixed
+/// with `swiftPrefix` to form the generated Swift type name.
+///
 /// - Parameters:
-///   - type: The protocol buffer type as a string.
-///   - isMap: A boolean indicating if the type is a map type. Defaults to `false`.
+///   - type: The protocol buffer type as written in the proto source.
+///   - swiftPrefix: The prefix applied to generated Swift type names.
 /// - Returns: The corresponding Swift type as a string.
 func swiftType(from type: String, with swiftPrefix: String) -> String {
     switch type {
@@ -24,7 +28,10 @@ func swiftType(from type: String, with swiftPrefix: String) -> String {
 }
 
 
-/// An array of primitive protocol buffer types.
+/// Proto types whose values pass straight through in `init?(proto:)` with no
+/// conversion. Deliberately excludes `int32`/`int64`/`uint32`/`uint64` and
+/// friends — those need an `Int`/`UInt` conversion and are classified by
+/// `signedIntTypes`/`unsignedIntTypes` instead.
 let primitiveTypes = [
    "double",
    "float",

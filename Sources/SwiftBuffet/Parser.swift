@@ -2,9 +2,13 @@ import Foundation
 
 /// Parses a protocol buffer file from the given URL path.
 ///
-/// - Parameter path: The URL of the .proto file to be parsed.
+/// - Parameters:
+///   - path: The URL of the .proto file to be parsed.
+///   - swiftPrefix: The prefix applied to generated Swift type names.
+///   - verbose: Prints every parsed message, field, and enum when `true`.
 /// - Returns: A tuple containing arrays of `ProtoMessage` and `ProtoEnum`.
-/// - Throws: An error if the file cannot be read or parsed.
+/// - Throws: An error if the file cannot be read, or `ParseError` (with line
+///   and column) if the proto source is malformed.
 internal func parseProtoFile(
     at path: URL,
     with swiftPrefix: String,

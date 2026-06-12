@@ -34,7 +34,7 @@ struct SwiftBuffet: ParsableCommand {
 
     @Option(
         name: .customLong("local-id-messages"),
-        help: "A list of message name describing which objects should include a local ID. This can be useful in SwiftUI"
+        help: "Message names that should include a generated local ID property. Useful as a stable identity in SwiftUI"
     )
     var localIDMessages: [String] = []
 

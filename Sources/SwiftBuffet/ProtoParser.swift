@@ -288,6 +288,8 @@ struct ProtoParser {
         }
     }
 
+    /// Steps over an entire `service`/`extend` block by brace matching,
+    /// without understanding its contents — `.unknown` tokens included.
     private mutating func skipUnsupportedBlock(named keyword: String) throws {
         if verbose {
             print("Warning: skipping unsupported '\(keyword)' block")

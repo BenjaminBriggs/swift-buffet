@@ -37,6 +37,9 @@ struct ProtoMessage {
 
 /// Represents a field within a protocol buffer message.
 struct ProtoField {
+    /// The prefix applied to generated Swift type names. Stored per field so
+    /// the type-mapping properties below can prefix message and enum
+    /// references without further context.
     let swiftPrefix: String
 
     /// The name of the field.
@@ -54,7 +57,8 @@ struct ProtoField {
     /// Indicates if the field has been marked as deprecated in the proto file.
     let isDeprecated: Bool
 
-    /// The case-corrected name of the field, converted to camelCase.
+    /// The generated Swift property name: camelCase, with `Url`/`Id` from
+    /// `_url`/`_id` field names capitalized to `URL`/`ID`.
     var caseCorrectName: String {
         var newName = snakeToCamelCase(name)
         if name.contains("_url") {
@@ -66,6 +70,9 @@ struct ProtoField {
         return newName
     }
 
+    /// The property name as exposed on the SwiftProtobuf-generated type.
+    /// Usually identical to `caseCorrectName`, but SwiftProtobuf escapes
+    /// names that collide with its own API (`description` → `description_p`).
     var caseCorrectProtoName: String {
         var newName = caseCorrectName
         if name == "description" {
@@ -76,7 +83,9 @@ struct ProtoField {
 
     /// The base type of the field, mapped to Swift types.
     var caseCorrectedBaseType: String {
-        if isMap { // Skip map types since they are handled separately
+        if isMap {
+            // Map fields store their type as "<key, value>" (see
+            // ProtoParser.parseField); unpack and map each side.
             let mapTypes = type
                 .dropFirst()
                 .dropLast()
@@ -92,6 +101,8 @@ struct ProtoField {
         }
     }
 
+    /// Whether this string field is generated as `URL` instead of `String`,
+    /// based on its name ending in URL/URI (URLS/URIS when repeated).
     var isURL: Bool {
         guard type == "string" else {
             return false
