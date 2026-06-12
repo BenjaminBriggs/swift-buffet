@@ -24,16 +24,8 @@ func swiftType(from type: String, with swiftPrefix: String) -> String {
 }
 
 
-/// Proto scalar types that map to Swift integer types (see `swiftType`).
-let integerScalarTypes: Set<String> = [
-    "int32", "sint32", "sfixed32",
-    "int64", "sint64", "sfixed64",
-    "uint32", "fixed32",
-    "uint64", "fixed64"
-]
-
 /// An array of primitive protocol buffer types.
-var primitiveTypes = [
+let primitiveTypes = [
    "double",
    "float",
    "sint32",
@@ -45,6 +37,24 @@ var primitiveTypes = [
    "bool",
    "string",
    "bytes"
+]
+
+/// Proto integer types that map to `Int`.
+let signedIntTypes = [
+    "int32",
+    "sint32",
+    "sfixed32",
+    "int64",
+    "sint64",
+    "sfixed64"
+]
+
+/// Proto integer types that map to `UInt`.
+let unsignedIntTypes = [
+    "uint32",
+    "fixed32",
+    "uint64",
+    "fixed64"
 ]
 
 /// Converts a snake_case string to camelCase.
@@ -65,32 +75,29 @@ func snakeToCamelCase(_ string: String) -> String {
 
 /// Strips the common prefix from a list of enum cases and converts them to camelCase.
 ///
-/// Only whole `_`-delimited words are stripped, and never so much that a
-/// case name becomes empty — a single-case enum shares its entire name as
-/// the "common" prefix, and `GENDER = 0; GENDER_MALE = 1;` shares all of
-/// `GENDER`.
+/// The prefix is only stripped at an underscore boundary, and only when there is
+/// more than one case (a single case is its own common prefix). A case is left
+/// unstripped when stripping would empty it or leave it starting with a digit.
 ///
 /// - Parameter cases: An array of `ProtoEnumCase` to be processed.
 /// - Returns: An array of `ProtoEnumCase` with the common prefix removed and names converted to camelCase.
 func stripCommonPrefix(from cases: [ProtoEnumCase]) -> [ProtoEnumCase] {
-    let names = cases.map { $0.name }
-    var prefix = findCommonPrefix(in: names) ?? ""
-
-    // Cut back to the last underscore so only whole words are stripped.
-    if let lastUnderscore = prefix.lastIndex(of: "_") {
-        prefix = String(prefix[...lastUnderscore])
-    } else {
-        prefix = ""
+    var prefix = ""
+    if cases.count > 1 {
+        let commonPrefix = findCommonPrefix(in: cases.map { $0.name }) ?? ""
+        // Trim back to the last underscore so we only strip whole words,
+        // e.g. MALE/MARRIED share "MA" but no word prefix.
+        if let lastUnderscore = commonPrefix.lastIndex(of: "_") {
+            prefix = String(commonPrefix[...lastUnderscore])
+        }
     }
-    // Never strip a name to nothing.
-    if names.contains(where: { $0.count == prefix.count }) {
-        prefix = ""
-    }
-
     return cases.map { enumCase in
-        let newName = snakeToCamelCase(String(enumCase.name.dropFirst(prefix.count)))
+        var strippedName = String(enumCase.name.dropFirst(prefix.count))
+        if strippedName.isEmpty || strippedName.first?.isNumber == true {
+            strippedName = enumCase.name
+        }
         return ProtoEnumCase(
-            name: newName,
+            name: snakeToCamelCase(strippedName),
             value: enumCase.value
         )
     }
@@ -118,9 +125,5 @@ func findCommonPrefix(in strings: [String]) -> String? {
 extension String {
     func capitalizingFirstLetter() -> String {
         return prefix(1).capitalized + dropFirst()
-    }
-
-    mutating func capitalizeFirstLetter() {
-        self = self.capitalizingFirstLetter()
     }
 }

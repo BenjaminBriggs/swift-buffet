@@ -271,7 +271,7 @@ final class GeneratorTests: XCTestCase {
         XCTAssertTrue(generatedCode.contains("internal init?(proto: ProtoPerson)"), "The generated code should contain the 'init?(proto:)' method")
     }
 
-    func testIntegerConversionIsFailableNotForceUnwrapped() throws {
+    func testIntegerConversionUsesMatchingSwiftType() throws {
         let message = ProtoMessage(
             name: "Stats",
             fields: [
@@ -310,9 +310,10 @@ final class GeneratorTests: XCTestCase {
         )
 
         XCTAssertFalse(generated.contains("!"), "Integer conversion must not force-unwrap")
-        XCTAssertTrue(generated.contains("if let viewCount = UInt(exactly: proto.viewCount)"),
+        XCTAssertFalse(generated.contains("Int(exactly:"))
+        XCTAssertTrue(generated.contains("self.viewCount = UInt(proto.viewCount)"),
                       "uint64 must convert via its own Swift type, not Int")
-        XCTAssertTrue(generated.contains("if let rank = Int(exactly: proto.rank)"))
+        XCTAssertTrue(generated.contains("self.rank = Int(proto.rank)"))
     }
 
     func testMessageTypeNameContainingIntIsNotTreatedAsInteger() throws {

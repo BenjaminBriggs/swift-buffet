@@ -60,9 +60,6 @@ struct ProtoField {
         if name.contains("_url") {
             newName = newName.replacingOccurrences(of: "Url", with: "URL")
         }
-//        if name.contains("_uri") {
-//            newName = newName.replacingOccurrences(of: "Uri", with: "URL")
-//        }
         if name.contains("_id") {
             newName = newName.replacingOccurrences(of: "Id", with: "ID")
         }
@@ -70,17 +67,7 @@ struct ProtoField {
     }
 
     var caseCorrectProtoName: String {
-        var newName = snakeToCamelCase(name)
-        if name.contains("_url") {
-            newName = newName.replacingOccurrences(of: "Url", with: "URL")
-        }
-//        if name.contains("_uri") {
-//            newName.replacingOccurrences(of: "Uri", with: "URL")
-//        }
-        if name.contains("_id") {
-            newName = newName.replacingOccurrences(of: "Id", with: "ID")
-        }
-
+        var newName = caseCorrectName
         if name == "description" {
             newName = "description_p"
         }
@@ -106,9 +93,12 @@ struct ProtoField {
     }
 
     var isURL: Bool {
-        (caseCorrectName.uppercased().hasSuffix("URL")
-         || caseCorrectName.uppercased().hasSuffix("URI"))
-        && type == "string"
+        guard type == "string" else {
+            return false
+        }
+        let upperName = caseCorrectName.uppercased()
+        let suffixes = isRepeated ? ["URLS", "URIS"] : ["URL", "URI"]
+        return suffixes.contains(where: upperName.hasSuffix)
     }
 
     /// The fully case-corrected type of the field, including optional and repeated modifiers.
@@ -127,12 +117,6 @@ struct ProtoField {
         }
     }
 
-    /// Indicates if the field is an integer scalar (int32, uint64, etc.),
-    /// which converts between SwiftProtobuf's fixed-width type and Int/UInt.
-    var isIntegerScalar: Bool {
-        integerScalarTypes.contains(type)
-    }
-
     /// Indicates if the field is of a primitive type.
     var isPrimitiveType: Bool {
         if isMap {
@@ -140,6 +124,11 @@ struct ProtoField {
         } else {
             return primitiveTypes.contains(type)
         }
+    }
+
+    /// Indicates if the field is a proto integer type (signed or unsigned).
+    var isIntType: Bool {
+        signedIntTypes.contains(type) || unsignedIntTypes.contains(type)
     }
 }
 

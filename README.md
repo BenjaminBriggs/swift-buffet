@@ -28,10 +28,35 @@ targets: [
             .process("yourFile.proto")
         ],
         plugins: [
-            .plugin(name: "SwiftBuffetPlugin", package: "SwiftBuffet"))
+            .plugin(name: "SwiftBuffetPlugin", package: "SwiftBuffet")
         ]
     )
 ]
+```
+
+#### Plugin Configuration
+
+The plugin can be configured by placing a `swiftbuffet.json` file in the target's source directory (next to your `.proto` files). All fields are optional:
+
+```json
+{
+    "swiftPrefix": "MyApp",
+    "includeProtobuf": true,
+    "protoPrefix": "Proto",
+    "storeBackingData": false,
+    "localIDMessages": ["Person"],
+    "quiet": true
+}
+```
+
+Each field maps to the equivalent command-line option below. Without a config file the plugin uses the tool's defaults. If the file lives inside a target's source directory, add it to the target's `exclude` list to avoid an unhandled-resource warning:
+
+```swift
+.target(
+    name: "YourTarget",
+    exclude: ["swiftbuffet.json"],
+    ...
+)
 ```
 
 ## Usage
@@ -74,7 +99,7 @@ In addition to the basic input and output paths, Swift Buffet provides several o
   ```swift
   public struct Person: Hashable, Equatable, Sendable {
     ...
-    public init(proto: ProtoPerson)? {
+    internal init?(proto: ProtoPerson) {
       ...
     }
     public init?(data: Data) {
@@ -118,7 +143,7 @@ In addition to the basic input and output paths, Swift Buffet provides several o
   ```swift
   public struct Person: Hashable, Equatable, Sendable {
     ...
-    public private(set) var _localID = UUID()
+    public let _localID = UUID()
     ...
   }
   ```

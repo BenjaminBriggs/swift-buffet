@@ -183,8 +183,8 @@ final class ParserCorpusTests: XCTestCase {
         let stripped = stripCommonPrefix(from: [
             ProtoEnumCase(name: "S_UNKNOWN", value: 0)
         ])
-        XCTAssertEqual(stripped.map(\.name), ["unknown"],
-                       "A single case must not be stripped to an empty name")
+        XCTAssertEqual(stripped.map(\.name), ["sUnknown"],
+                       "A single case is its own common prefix and must not be stripped")
     }
 
     func testPrefixEqualToWholeCaseNameIsNotStripped() throws {

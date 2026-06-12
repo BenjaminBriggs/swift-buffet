@@ -122,11 +122,7 @@ final class GoldenTests: XCTestCase {
             }
             internal init?(proto: ProtoPerson) {
                 self.name = proto.name
-                if let id = Int(exactly: proto.id) {
-                    self.id = id
-                } else {
-                    return nil
-                }
+                self.id = Int(proto.id)
                 self.email = proto.email
             }
         }

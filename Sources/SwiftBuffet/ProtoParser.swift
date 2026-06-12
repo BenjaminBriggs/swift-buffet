@@ -10,21 +10,21 @@ import Foundation
 /// lists are skipped silently. Anything else malformed throws `ParseError`.
 struct ProtoParser {
 
-    static func parse(_ source: String, quite: Bool) throws -> ProtoFileNode {
+    static func parse(_ source: String, verbose: Bool) throws -> ProtoFileNode {
         var parser = ProtoParser(
             tokens: try Lexer.tokenize(source),
-            quite: quite
+            verbose: verbose
         )
         return try parser.parseFile()
     }
 
     private let tokens: [Token]
-    private let quite: Bool
+    private let verbose: Bool
     private var index = 0
 
-    private init(tokens: [Token], quite: Bool) {
+    private init(tokens: [Token], verbose: Bool) {
         self.tokens = tokens
-        self.quite = quite
+        self.verbose = verbose
     }
 
     // MARK: - Grammar
@@ -268,7 +268,7 @@ struct ProtoParser {
     }
 
     private mutating func skipUnsupportedBlock(named keyword: String) throws {
-        if quite == false {
+        if verbose {
             print("Warning: skipping unsupported '\(keyword)' block")
         }
         advance() // keyword

@@ -101,7 +101,7 @@ final class LexerTests: XCTestCase {
 
     func testUnknownCharacterInParsedPositionThrows() {
         XCTAssertThrowsError(
-            try ProtoParser.parse("message § {}", quite: true)
+            try ProtoParser.parse("message § {}", verbose: false)
         ) { error in
             guard let parseError = error as? ParseError else {
                 return XCTFail("Expected ParseError, got \(error)")

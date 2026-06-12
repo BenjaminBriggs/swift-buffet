@@ -5,7 +5,7 @@ final class ProtoParserErrorTests: XCTestCase {
 
     private func parseError(_ source: String) -> ParseError? {
         do {
-            _ = try ProtoParser.parse(source, quite: true)
+            _ = try ProtoParser.parse(source, verbose: false)
             return nil
         } catch let error as ParseError {
             return error
@@ -73,7 +73,7 @@ final class ProtoParserErrorTests: XCTestCase {
         string y = 4;
         }
         """
-        let file = try ProtoParser.parse(proto, quite: true)
+        let file = try ProtoParser.parse(proto, verbose: false)
         XCTAssertEqual(file.messages.count, 1)
         XCTAssertEqual(file.messages[0].fields.map(\.name), ["x", "a", "b", "y"])
     }
@@ -88,7 +88,7 @@ final class ProtoParserErrorTests: XCTestCase {
         string name = 1;
         }
         """
-        let file = try ProtoParser.parse(proto, quite: true)
+        let file = try ProtoParser.parse(proto, verbose: false)
         XCTAssertEqual(file.messages.map(\.name), ["HelloRequest"])
     }
 
@@ -100,7 +100,7 @@ final class ProtoParserErrorTests: XCTestCase {
         string x = 1;
         }
         """
-        let file = try ProtoParser.parse(proto, quite: true)
+        let file = try ProtoParser.parse(proto, verbose: false)
         XCTAssertEqual(file.messages[0].fields.map(\.name), ["x"])
     }
 }

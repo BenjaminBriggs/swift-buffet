@@ -8,15 +8,13 @@ import Foundation
 internal func parseProtoFile(
     at path: URL,
     with swiftPrefix: String,
-    verbose: Bool,
-    quite: Bool
+    verbose: Bool
 ) throws -> ([ProtoMessage], [ProtoEnum]) {
     let content = try String(contentsOf: path)
     return try parseProto(
         content,
         swiftPrefix: swiftPrefix,
-        verbose: verbose,
-        quite: quite
+        verbose: verbose
     )
 }
 
@@ -27,25 +25,20 @@ internal func parseProtoFile(
 func parseProto(
     _ content: String,
     swiftPrefix: String,
-    verbose: Bool = false,
-    quite: Bool = true
+    verbose: Bool = false
 ) throws -> ([ProtoMessage], [ProtoEnum]) {
-    let file = try ProtoParser.parse(content, quite: quite)
+    let file = try ProtoParser.parse(content, verbose: verbose)
     let (messages, enums) = flatten(file, swiftPrefix: swiftPrefix)
 
-    if quite == false {
-        for message in messages {
-            print("Matched message: \(message.name)")
-        }
-        for protoEnum in enums {
-            print("Matched enum: \(protoEnum.name)")
-        }
-    }
     if verbose {
         for message in messages {
+            print("Matched message: \(message.name)")
             for field in message.fields {
                 print("Matched field type: \(field.type), field name: \(field.name), isOptional: \(field.isOptional), isRepeated: \(field.isRepeated), isMap: \(field.isMap))")
             }
+        }
+        for protoEnum in enums {
+            print("Matched enum: \(protoEnum.name)")
         }
     }
 

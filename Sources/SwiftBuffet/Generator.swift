@@ -275,13 +275,9 @@ private func protoInit(
 
 /// The statement assigning one field inside `init?(proto:)`.
 ///
-/// Mirrors the legacy generator's branch ladder, with one deliberate
-/// correction: the legacy code referenced `caseCorrectName` on the proto
-/// object (and assigned it after `if let`) in the URL, integer, and
-/// non-optional message branches, which produced wrong code whenever the
-/// Swift and proto property names differ (e.g. `description`). All proto
-/// accesses now use `caseCorrectProtoName` and `if let` bindings are
-/// assigned correctly.
+/// Integer scalars convert directly via their Swift type (Int/UInt per
+/// `signedIntTypes`/`unsignedIntTypes`); URL-suffixed string fields convert
+/// through `URL(string:)`, failably where the field is required.
 private func protoInitStatement(for field: ProtoField) -> String {
     let name = field.caseCorrectName
     let protoName = field.caseCorrectProtoName
@@ -289,9 +285,13 @@ private func protoInitStatement(for field: ProtoField) -> String {
 
     var statement: String
     if field.isRepeated {
-        let transform = (field.isPrimitiveType || field.isIntegerScalar)
-            ? "\(baseType)($0)"
-            : "\(baseType)(proto: $0)"
+        let transform = if field.isURL {
+            "URL(string: $0)"
+        } else if field.isPrimitiveType || field.isIntType {
+            "\(baseType)($0)"
+        } else {
+            "\(baseType)(proto: $0)"
+        }
         statement = "self.\(name) = proto.\(protoName).compactMap { \(transform) }"
     } else if field.isMap {
         statement = "self.\(name) = proto.\(protoName).reduce(into: \(field.caseCorrectedType)()) { result, element in result[element.key] = element.value }"
@@ -308,15 +308,8 @@ private func protoInitStatement(for field: ProtoField) -> String {
                 to: "URL(string: proto.\(protoName))"
             )
         }
-    } else if field.isIntegerScalar {
-        if field.isOptional {
-            statement = "self.\(name) = \(baseType)(exactly: proto.\(protoName))"
-        } else {
-            statement = requiredAssignment(
-                of: name,
-                to: "\(baseType)(exactly: proto.\(protoName))"
-            )
-        }
+    } else if field.isIntType {
+        statement = "self.\(name) = \(baseType)(proto.\(protoName))"
     } else if field.isPrimitiveType {
         statement = "self.\(name) = proto.\(protoName)"
     } else if field.isOptional == false {
