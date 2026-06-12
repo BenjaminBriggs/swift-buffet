@@ -30,6 +30,12 @@ public struct FingerSandwich: Hashable, Equatable, Sendable {
 
 Under the hood, proto files are parsed with a hand-written recursive-descent parser and the Swift output is built with SwiftSyntax — every generated file is re-parsed before it is written, so the tool fails with a clear error rather than putting invalid Swift into your build. Malformed proto input fails with a line and column number.
 
+## Why Swift Buffet?
+
+We learned the hard way that the objects SwiftProtobuf generates are great for one thing — decoding protobuf data — and shouldn't travel any further than that. They look like structs, but they do a lot under the covers: storage can be heap-backed and copy-on-write, scalar fields are never optional and silently fall back to implicit defaults (`""`, `0`), real presence lives in separate `hasFoo` flags, and every message drags `unknownFields` along with it. Feed them to SwiftUI views and view models and you inherit all of that as your UI state — surprising equality, surprising mutations, and types whose shape doesn't match what your screens actually need.
+
+Swift Buffet exists to draw that line. Use SwiftProtobuf at the network edge to decode the wire format, then hand the data straight to plain Swift value types that mirror your response objects exactly: simple `let` properties, real optionals, `Hashable`, `Equatable`, and `Sendable`, and nothing happening behind your back. Those are the types your SwiftUI views and view models consume — without the baggage of the protobuf output. The generated `init?(proto:)` and `init?(data:)` initializers are the only place the two worlds meet.
+
 ## Installation
 
 ### Swift Package Manager
