@@ -3,7 +3,7 @@ import Foundation
 /// The parsed representation of a .proto file as a tree.
 ///
 /// The tree mirrors the nesting in the source file; `flatten` converts it to
-/// the flat `parentName`-based models the generator consumes.
+/// the flat `parentPath`-based models the generator consumes.
 struct ProtoFileNode {
     var messages: [MessageNode] = []
     var enums: [EnumNode] = []
